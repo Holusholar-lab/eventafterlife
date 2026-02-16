@@ -47,7 +47,8 @@
 
     --surface: 0 0% 12%;
     --surface-hover: 0 0% 16%;
-    --hero-overlay: linear-gradient(180deg, hsla(0, 0%, 7%, 0.3) 0%, hsla(0, 0%, 7%, 0.8) 70%, hsl(0, 0%, 7%) 100%);
+    /* Darker in center where "Welcome to Afterlife" and tagline sit */
+    --hero-overlay: linear-gradient(180deg, hsla(0, 0%, 0%, 0.58) 0%, hsla(0, 0%, 0%, 0.85) 35%, hsla(0, 0%, 0%, 0.9) 55%, hsla(0, 0%, 0%, 0.85) 100%);
     --card-overlay: linear-gradient(180deg, transparent 30%, hsla(0, 0%, 0%, 0.85) 100%);
     --glow-primary: 0 10px 40px -10px hsla(0, 84%, 50%, 0.4);
 
