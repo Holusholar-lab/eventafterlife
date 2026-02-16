@@ -1,9 +1,28 @@
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { Link, useLocation, Outlet, Navigate } from "react-router-dom";
 import { Upload, Video, BarChart3, Settings, LayoutDashboard, LogOut, Play, Eye, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getCurrentUser, logout } from "@/lib/auth";
+
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL?.trim().toLowerCase();
 
 const AdminLayout = () => {
   const location = useLocation();
+  const user = getCurrentUser();
+
+  if (!user) {
+    return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
+  }
+  if (ADMIN_EMAIL && user.email.toLowerCase() !== ADMIN_EMAIL) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="text-center max-w-md">
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Access denied</h1>
+          <p className="text-gray-600 mb-4">You don’t have permission to view the admin panel.</p>
+          <Link to="/" className="text-teal-600 hover:underline">Return to site</Link>
+        </div>
+      </div>
+    );
+  }
 
   const navItems = [
     { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -70,13 +89,17 @@ const AdminLayout = () => {
               <Eye className="w-5 h-5" />
               View as Guest
             </a>
-            <Link
-              to="/"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                window.location.href = "/";
+              }}
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-left"
             >
               <LogOut className="w-5 h-5" />
               Log out
-            </Link>
+            </button>
           </div>
         </div>
       </aside>

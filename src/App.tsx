@@ -1,8 +1,11 @@
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ensureAdminVideosLoaded } from "@/lib/admin-videos";
+import { ensureRentalsLoaded } from "@/lib/rentals";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Index from "./pages/home";
@@ -29,7 +32,21 @@ import ManageMessages from "./pages/admin/manage-messages";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    Promise.all([ensureAdminVideosLoaded(), ensureRentalsLoaded()]).then(() => setReady(true));
+  }, []);
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-muted-foreground text-sm">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -181,6 +198,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

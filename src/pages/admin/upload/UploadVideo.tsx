@@ -119,7 +119,7 @@ const UploadVideo = () => {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      createAdminVideo({
+      await createAdminVideo({
         title: data.title,
         description: data.description,
         category: data.category,

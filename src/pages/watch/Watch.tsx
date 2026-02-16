@@ -19,10 +19,7 @@ const Watch = () => {
 
   useEffect(() => {
     if (!adminVideo) return;
-    
-    // Increment view count when video page is accessed
     incrementVideoViews(adminVideo.id);
-    
     const tick = () => {
       const rental = getActiveRental(adminVideo.id);
       if (!rental) {

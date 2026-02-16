@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 export interface ContactMessage {
   id: string;
   name: string;
@@ -11,36 +13,47 @@ export interface ContactMessage {
 const STORAGE_KEY = "contact_messages";
 const SUPPORT_EMAIL = "info@eventafterlife.com";
 
-export function saveContactMessage(
+function getFromStorage(): ContactMessage[] {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveToStorage(messages: ContactMessage[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+}
+
+export async function saveContactMessage(
   name: string,
   email: string,
   subject: string,
   message: string
-): { success: boolean; error?: string } {
+): Promise<{ success: boolean; error?: string }> {
   try {
-    const messages = getMessages();
-    
+    const createdAt = Date.now();
+    if (supabase) {
+      const { data, error } = await supabase
+        .from("contact_messages")
+        .insert({ name, email, subject, message, status: "new", created_at: createdAt })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return { success: true };
+    }
     const newMessage: ContactMessage = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `msg_${createdAt}_${Math.random().toString(36).slice(2, 9)}`,
       name,
       email,
       subject,
       message,
-      createdAt: Date.now(),
+      createdAt,
       status: "new",
     };
-
+    const messages = getFromStorage();
     messages.push(newMessage);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-    
-    // Create mailto link (will open user's email client)
-    const mailtoLink = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
-      `Name: ${name}\nEmail: ${email}\n\n${message}`
-    )}`;
-    
-    // Note: In a real application, you would send this via a backend API
-    // For now, we'll save it and the admin can view it
-    
+    saveToStorage(messages);
     return { success: true };
   } catch (error) {
     console.error("Error saving message:", error);
@@ -49,32 +62,66 @@ export function saveContactMessage(
 }
 
 export function getAllMessages(): ContactMessage[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch {
-    return [];
+  return getFromStorage();
+}
+
+export async function getAllMessagesAsync(): Promise<ContactMessage[]> {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("contact_messages")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data || []).map((r: { id: string; name: string; email: string; subject: string; message: string; created_at: number; status: string }) => ({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      subject: r.subject,
+      message: r.message,
+      createdAt: r.created_at,
+      status: r.status as ContactMessage["status"],
+    }));
   }
+  return getFromStorage();
 }
 
 export function getMessageById(id: string): ContactMessage | null {
-  const messages = getAllMessages();
-  return messages.find((m) => m.id === id) || null;
+  return getAllMessages().find((m) => m.id === id) || null;
 }
 
-export function updateMessageStatus(id: string, status: ContactMessage["status"]): void {
-  const messages = getAllMessages();
+export async function updateMessageStatus(id: string, status: ContactMessage["status"]): Promise<void> {
+  if (supabase) {
+    const { error } = await supabase.from("contact_messages").update({ status }).eq("id", id);
+    if (error) throw error;
+    return;
+  }
+  const messages = getFromStorage();
   const updated = messages.map((m) => (m.id === id ? { ...m, status } : m));
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  saveToStorage(updated);
 }
 
-export function deleteMessage(id: string): void {
-  const messages = getAllMessages();
-  const filtered = messages.filter((m) => m.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+export async function deleteMessage(id: string): Promise<void> {
+  if (supabase) {
+    const { error } = await supabase.from("contact_messages").delete().eq("id", id);
+    if (error) throw error;
+    return;
+  }
+  const messages = getFromStorage().filter((m) => m.id !== id);
+  saveToStorage(messages);
 }
 
 export function getMessagesStats() {
   const messages = getAllMessages();
+  return {
+    total: messages.length,
+    new: messages.filter((m) => m.status === "new").length,
+    read: messages.filter((m) => m.status === "read").length,
+    replied: messages.filter((m) => m.status === "replied").length,
+  };
+}
+
+export async function getMessagesStatsAsync(): Promise<{ total: number; new: number; read: number; replied: number }> {
+  const messages = await getAllMessagesAsync();
   return {
     total: messages.length,
     new: messages.filter((m) => m.status === "new").length,

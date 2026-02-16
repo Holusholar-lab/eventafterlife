@@ -50,18 +50,16 @@ const RentDialog = ({ open, onOpenChange, video }: RentDialogProps) => {
     onOpenChange(val);
   };
 
-  const handlePay = () => {
+  const handlePay = async () => {
     setProcessing(true);
-    setTimeout(() => {
-      createRental(video.id, selectedPlan);
-      // Record rental in admin analytics
-      if (adminVideo) {
-        const price = selectedPlan === "24" ? adminVideo.price24h : selectedPlan === "48" ? adminVideo.price48h : adminVideo.price72h;
-        recordVideoRental(video.id, price);
-      }
-      setProcessing(false);
-      setStep("success");
-    }, 1500);
+    await new Promise((r) => setTimeout(r, 1500));
+    await createRental(video.id, selectedPlan);
+    if (adminVideo) {
+      const price = selectedPlan === "24" ? adminVideo.price24h : selectedPlan === "48" ? adminVideo.price48h : adminVideo.price72h;
+      await recordVideoRental(video.id, price);
+    }
+    setProcessing(false);
+    setStep("success");
   };
 
   const handleWatch = () => {

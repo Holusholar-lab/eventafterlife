@@ -89,9 +89,9 @@ const ManageVideos = () => {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (videoToDelete) {
-      const success = deleteAdminVideo(videoToDelete);
+      const success = await deleteAdminVideo(videoToDelete);
       if (success) {
         toast.success("Video deleted successfully");
         loadVideos();
@@ -103,14 +103,14 @@ const ManageVideos = () => {
     }
   };
 
-  const togglePublic = (video: AdminVideo) => {
-    updateAdminVideo(video.id, { isPublic: !video.isPublic });
+  const togglePublic = async (video: AdminVideo) => {
+    await updateAdminVideo(video.id, { isPublic: !video.isPublic });
     toast.success(`Video is now ${!video.isPublic ? "public" : "private"}`);
     loadVideos();
   };
 
-  const toggleActive = (video: AdminVideo) => {
-    updateAdminVideo(video.id, { isActive: !video.isActive });
+  const toggleActive = async (video: AdminVideo) => {
+    await updateAdminVideo(video.id, { isActive: !video.isActive });
     toast.success(`Video is now ${!video.isActive ? "active" : "inactive"}`);
     loadVideos();
   };

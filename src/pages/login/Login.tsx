@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { login } from "@/lib/auth";
+import { ensureRentalsLoaded } from "@/lib/rentals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,6 +27,8 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/library";
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -41,11 +44,12 @@ const Login = () => {
     const result = login(data.email, data.password);
     
     if (result.success) {
+      await ensureRentalsLoaded();
       toast({
         title: "Welcome back!",
         description: "You've been successfully signed in.",
       });
-      navigate("/library");
+      navigate(redirectTo.startsWith("/") ? redirectTo : "/library");
     } else {
       toast({
         title: "Login failed",

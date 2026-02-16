@@ -49,7 +49,7 @@ const Contact = () => {
     setIsSubmitting(true);
     
     try {
-      const result = saveContactMessage(
+      const result = await saveContactMessage(
         data.name,
         data.email,
         data.subject,

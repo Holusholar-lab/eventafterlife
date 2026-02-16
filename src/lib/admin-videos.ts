@@ -1,127 +1,258 @@
+import { supabase, isSupabaseConfigured } from "./supabase";
+
 export interface AdminVideo {
   id: string;
   title: string;
   description: string;
-  videoUrl: string; // URL or file path
-  thumbnailUrl: string; // URL or file path
+  videoUrl: string;
+  thumbnailUrl: string;
   category: string;
   duration: string;
-  price24h: number; // Price for 24-hour rental
-  price48h: number; // Price for 48-hour rental
-  price72h: number; // Price for 72-hour rental
-  isPublic: boolean; // Accessibility: public or private
-  isActive: boolean; // Whether video is active/available
-  createdAt: number; // timestamp
-  updatedAt: number; // timestamp
-  views: number; // Analytics: view count
-  rentals: number; // Analytics: rental count
-  revenue: number; // Analytics: total revenue
+  price24h: number;
+  price48h: number;
+  price72h: number;
+  isPublic: boolean;
+  isActive: boolean;
+  createdAt: number;
+  updatedAt: number;
+  views: number;
+  rentals: number;
+  revenue: number;
 }
 
 const STORAGE_KEY = "admin_videos";
 
-// Initialize with existing videos from content.ts if needed
-function initializeVideos(): AdminVideo[] {
-  const existing = localStorage.getItem(STORAGE_KEY);
-  if (existing) {
-    return JSON.parse(existing);
-  }
-  
-  // Migrate existing videos from content.ts if admin videos don't exist
+type Row = {
+  id: string;
+  title: string;
+  description: string;
+  video_url: string;
+  thumbnail_url: string;
+  category: string;
+  duration: string;
+  price_24h: number;
+  price_48h: number;
+  price_72h: number;
+  is_public: boolean;
+  is_active: boolean;
+  created_at: number;
+  updated_at: number;
+  views: number;
+  rentals: number;
+  revenue: number;
+};
+
+function rowToVideo(r: Row): AdminVideo {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    videoUrl: r.video_url,
+    thumbnailUrl: r.thumbnail_url,
+    category: r.category,
+    duration: r.duration,
+    price24h: Number(r.price_24h),
+    price48h: Number(r.price_48h),
+    price72h: Number(r.price_72h),
+    isPublic: r.is_public,
+    isActive: r.is_active,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    views: r.views ?? 0,
+    rentals: r.rentals ?? 0,
+    revenue: Number(r.revenue ?? 0),
+  };
+}
+
+function videoToRow(v: Partial<AdminVideo>): Partial<Row> {
+  const row: Partial<Row> = {};
+  if (v.title !== undefined) row.title = v.title;
+  if (v.description !== undefined) row.description = v.description;
+  if (v.videoUrl !== undefined) row.video_url = v.videoUrl;
+  if (v.thumbnailUrl !== undefined) row.thumbnail_url = v.thumbnailUrl;
+  if (v.category !== undefined) row.category = v.category;
+  if (v.duration !== undefined) row.duration = v.duration;
+  if (v.price24h !== undefined) row.price_24h = v.price24h;
+  if (v.price48h !== undefined) row.price_48h = v.price48h;
+  if (v.price72h !== undefined) row.price_72h = v.price72h;
+  if (v.isPublic !== undefined) row.is_public = v.isPublic;
+  if (v.isActive !== undefined) row.is_active = v.isActive;
+  if (v.createdAt !== undefined) row.created_at = v.createdAt;
+  if (v.updatedAt !== undefined) row.updated_at = v.updatedAt;
+  if (v.views !== undefined) row.views = v.views;
+  if (v.rentals !== undefined) row.rentals = v.rentals;
+  if (v.revenue !== undefined) row.revenue = v.revenue;
+  return row;
+}
+
+let _cache: AdminVideo[] | null = null;
+
+function getFromStorage(): AdminVideo[] {
+  try {
+    const existing = localStorage.getItem(STORAGE_KEY);
+    if (existing) return JSON.parse(existing);
+  } catch {}
+  return [];
+}
+
+function saveToStorage(videos: AdminVideo[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
+}
+
+function initializeFromStorage(): AdminVideo[] {
+  const existing = getFromStorage();
+  if (existing.length > 0) return existing;
   try {
     const { videos } = require("@/data/content");
-    if (videos && videos.length > 0) {
-      const migratedVideos: AdminVideo[] = videos.map((v: any, index: number) => {
-        // Extract price from string like "$4.99 / 48hrs"
+    if (videos?.length > 0) {
+      const migrated: AdminVideo[] = videos.map((v: any, i: number) => {
         const priceMatch = v.price?.match(/\$([\d.]+)/);
-        const defaultPrice = priceMatch ? parseFloat(priceMatch[1]) : 4.99;
-        
+        const p = priceMatch ? parseFloat(priceMatch[1]) : 4.99;
         return {
-          id: v.id || `migrated-${index}`,
+          id: v.id || `migrated-${i}`,
           title: v.title,
           description: v.description,
-          videoUrl: typeof v.image === 'string' ? v.image : '', // Use image as video URL placeholder
-          thumbnailUrl: typeof v.image === 'string' ? v.image : '',
+          videoUrl: typeof v.image === "string" ? v.image : "",
+          thumbnailUrl: typeof v.image === "string" ? v.image : "",
           category: v.category,
           duration: v.duration,
-          price24h: defaultPrice * 0.6, // Estimate 24h price
-          price48h: defaultPrice,
-          price72h: defaultPrice * 1.4, // Estimate 72h price
+          price24h: p * 0.6,
+          price48h: p,
+          price72h: p * 1.4,
           isPublic: true,
           isActive: true,
-          createdAt: Date.now() - (videos.length - index) * 86400000, // Stagger creation dates
+          createdAt: Date.now() - (videos.length - i) * 86400000,
           updatedAt: Date.now(),
           views: 0,
           rentals: 0,
           revenue: 0,
         };
       });
-      saveVideos(migratedVideos);
-      return migratedVideos;
+      saveToStorage(migrated);
+      return migrated;
     }
-  } catch (error) {
-    console.error("Error migrating videos:", error);
+  } catch (e) {
+    console.error("Migration error:", e);
   }
-  
   return [];
 }
 
-function saveVideos(videos: AdminVideo[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
+/** Call once on app load when using Supabase so getAllAdminVideos() has data. */
+export async function ensureAdminVideosLoaded(): Promise<void> {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("admin_videos")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      console.error("Supabase admin_videos fetch error:", error);
+      _cache = initializeFromStorage();
+      return;
+    }
+    _cache = (data as Row[]).map(rowToVideo);
+    return;
+  }
+  _cache = initializeFromStorage();
 }
 
 export function getAllAdminVideos(): AdminVideo[] {
-  return initializeVideos();
+  if (_cache) return _cache;
+  return initializeFromStorage();
 }
 
 export function getAdminVideo(id: string): AdminVideo | undefined {
-  const videos = getAllAdminVideos();
-  return videos.find((v) => v.id === id);
+  return getAllAdminVideos().find((v) => v.id === id);
 }
 
-export function createAdminVideo(video: Omit<AdminVideo, "id" | "createdAt" | "updatedAt" | "views" | "rentals" | "revenue">): AdminVideo {
-  const videos = getAllAdminVideos();
+export async function createAdminVideo(
+  video: Omit<AdminVideo, "id" | "createdAt" | "updatedAt" | "views" | "rentals" | "revenue">
+): Promise<AdminVideo> {
+  const id = Date.now().toString();
+  const now = Date.now();
   const newVideo: AdminVideo = {
     ...video,
-    id: Date.now().toString(),
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
+    id,
+    createdAt: now,
+    updatedAt: now,
     views: 0,
     rentals: 0,
     revenue: 0,
   };
+
+  if (supabase) {
+    const { error } = await supabase.from("admin_videos").insert({
+      id: newVideo.id,
+      title: newVideo.title,
+      description: newVideo.description,
+      video_url: newVideo.videoUrl,
+      thumbnail_url: newVideo.thumbnailUrl,
+      category: newVideo.category,
+      duration: newVideo.duration,
+      price_24h: newVideo.price24h,
+      price_48h: newVideo.price48h,
+      price_72h: newVideo.price72h,
+      is_public: newVideo.isPublic,
+      is_active: newVideo.isActive,
+      created_at: newVideo.createdAt,
+      updated_at: newVideo.updatedAt,
+      views: 0,
+      rentals: 0,
+      revenue: 0,
+    });
+    if (error) throw error;
+    _cache = _cache ? [newVideo, ..._cache] : [newVideo];
+    return newVideo;
+  }
+
+  const videos = getAllAdminVideos();
   videos.push(newVideo);
-  saveVideos(videos);
+  saveToStorage(videos);
+  _cache = videos;
   return newVideo;
 }
 
-export function updateAdminVideo(id: string, updates: Partial<AdminVideo>): AdminVideo | null {
+export async function updateAdminVideo(id: string, updates: Partial<AdminVideo>): Promise<AdminVideo | null> {
   const videos = getAllAdminVideos();
   const index = videos.findIndex((v) => v.id === id);
   if (index === -1) return null;
-  
-  videos[index] = {
-    ...videos[index],
-    ...updates,
-    updatedAt: Date.now(),
-  };
-  saveVideos(videos);
-  return videos[index];
+
+  const updated = { ...videos[index], ...updates, updatedAt: Date.now() };
+
+  if (supabase) {
+    const row = videoToRow(updated);
+    const { error } = await supabase.from("admin_videos").update(row).eq("id", id);
+    if (error) throw error;
+    videos[index] = updated;
+    _cache = [...videos];
+    return updated;
+  }
+
+  videos[index] = updated;
+  saveToStorage(videos);
+  _cache = videos;
+  return updated;
 }
 
-export function deleteAdminVideo(id: string): boolean {
+export async function deleteAdminVideo(id: string): Promise<boolean> {
   const videos = getAllAdminVideos();
   const filtered = videos.filter((v) => v.id !== id);
   if (filtered.length === videos.length) return false;
-  saveVideos(filtered);
+
+  if (supabase) {
+    const { error } = await supabase.from("admin_videos").delete().eq("id", id);
+    if (error) throw error;
+    _cache = filtered;
+    return true;
+  }
+
+  saveToStorage(filtered);
+  _cache = filtered;
   return true;
 }
 
-// Analytics helpers
 export function getVideoAnalytics(id: string) {
   const video = getAdminVideo(id);
   if (!video) return null;
-  
   return {
     views: video.views,
     rentals: video.rentals,
@@ -135,13 +266,10 @@ export function getAllAnalytics() {
   const totalViews = videos.reduce((sum, v) => sum + v.views, 0);
   const totalRentals = videos.reduce((sum, v) => sum + v.rentals, 0);
   const totalRevenue = videos.reduce((sum, v) => sum + v.revenue, 0);
-  const activeVideos = videos.filter((v) => v.isActive).length;
-  const publicVideos = videos.filter((v) => v.isPublic).length;
-  
   return {
     totalVideos: videos.length,
-    activeVideos,
-    publicVideos,
+    activeVideos: videos.filter((v) => v.isActive).length,
+    publicVideos: videos.filter((v) => v.isPublic).length,
     totalViews,
     totalRentals,
     totalRevenue,
@@ -150,21 +278,19 @@ export function getAllAnalytics() {
   };
 }
 
-// Increment view count (called when video is viewed)
-export function incrementVideoViews(id: string) {
+export async function incrementVideoViews(id: string): Promise<void> {
   const video = getAdminVideo(id);
-  if (video) {
-    updateAdminVideo(id, { views: video.views + 1 });
-  }
+  if (!video) return;
+  await updateAdminVideo(id, { views: video.views + 1 });
 }
 
-// Record rental (called when video is rented)
-export function recordVideoRental(id: string, price: number) {
+export async function recordVideoRental(id: string, price: number): Promise<void> {
   const video = getAdminVideo(id);
-  if (video) {
-    updateAdminVideo(id, {
-      rentals: video.rentals + 1,
-      revenue: video.revenue + price,
-    });
-  }
+  if (!video) return;
+  await updateAdminVideo(id, {
+    rentals: video.rentals + 1,
+    revenue: video.revenue + price,
+  });
 }
+
+export { isSupabaseConfigured };

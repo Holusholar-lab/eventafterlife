@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { signUp } from "@/lib/auth";
+import { ensureRentalsLoaded } from "@/lib/rentals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -58,6 +59,7 @@ const SignUp = () => {
     const result = signUp(data.fullName, data.email, data.password, data.newsletter);
     
     if (result.success) {
+      await ensureRentalsLoaded();
       toast({
         title: "Account created!",
         description: "Welcome! You've been automatically signed in.",

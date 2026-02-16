@@ -115,7 +115,7 @@ const EditVideo = () => {
     
     setIsSubmitting(true);
     try {
-      updateAdminVideo(id, {
+      await updateAdminVideo(id, {
         title: data.title,
         description: data.description,
         category: data.category,

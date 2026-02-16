@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAllMessages, updateMessageStatus, deleteMessage, getMessagesStats, ContactMessage } from "@/lib/contact-messages";
+import { getAllMessagesAsync, updateMessageStatus, deleteMessage, getMessagesStatsAsync, ContactMessage } from "@/lib/contact-messages";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -26,23 +26,30 @@ import { toast } from "sonner";
 
 const ManageMessages = () => {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
-  const [stats, setStats] = useState(getMessagesStats());
+  const [stats, setStats] = useState({ total: 0, new: 0, read: 0, replied: 0 });
+  const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+
+  const loadMessages = async () => {
+    setLoading(true);
+    try {
+      const allMessages = await getAllMessagesAsync();
+      const s = await getMessagesStatsAsync();
+      setMessages(allMessages.sort((a, b) => b.createdAt - a.createdAt));
+      setStats(s);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadMessages();
   }, []);
 
-  const loadMessages = () => {
-    const allMessages = getAllMessages();
-    setMessages(allMessages.sort((a, b) => b.createdAt - a.createdAt));
-    setStats(getMessagesStats());
-  };
-
-  const handleStatusChange = (id: string, status: ContactMessage["status"]) => {
-    updateMessageStatus(id, status);
+  const handleStatusChange = async (id: string, status: ContactMessage["status"]) => {
+    await updateMessageStatus(id, status);
     loadMessages();
     toast.success("Message status updated");
   };
@@ -52,9 +59,9 @@ const ManageMessages = () => {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (messageToDelete) {
-      deleteMessage(messageToDelete);
+      await deleteMessage(messageToDelete);
       loadMessages();
       toast.success("Message deleted");
       setDeleteDialogOpen(false);
@@ -115,6 +122,9 @@ const ManageMessages = () => {
       </div>
 
       {/* Messages Table */}
+      {loading ? (
+        <p className="text-gray-600">Loading messages...</p>
+      ) : (
       <Card className="border border-gray-200">
         <CardHeader>
           <CardTitle className="text-gray-900">All Messages</CardTitle>
@@ -200,6 +210,7 @@ const ManageMessages = () => {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Message Details Dialog */}
       {selectedMessage && (
