@@ -8,6 +8,8 @@ export interface PublicVideo {
   category: string;
   duration: string;
   price: string;
+  /** Used for hover preview on cards; same as admin videoUrl */
+  videoUrl?: string;
 }
 
 // Convert AdminVideo to PublicVideo format
@@ -20,6 +22,7 @@ function adminVideoToPublic(video: AdminVideo): PublicVideo {
     category: video.category,
     duration: video.duration,
     price: `$${video.price48h.toFixed(2)} / 48hrs`,
+    videoUrl: video.videoUrl,
   };
 }
 

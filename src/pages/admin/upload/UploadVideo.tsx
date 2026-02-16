@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useNavigate } from "react-router-dom";
-import { Upload } from "lucide-react";
+import { Upload, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -159,7 +159,10 @@ const UploadVideo = () => {
           {/* Video Upload Zone */}
           <Card className="border border-gray-200">
             <CardHeader>
-              <CardTitle className="text-gray-900">Video Upload</CardTitle>
+              <CardTitle className="text-gray-900">Video source</CardTitle>
+              <CardDescription className="text-gray-600">
+                Add a video by pasting a URL (Google Drive, YouTube, Vimeo, or direct link) or by uploading a file.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <FormField
@@ -167,8 +170,34 @@ const UploadVideo = () => {
                 name="videoUrl"
                 render={({ field }) => (
                   <FormItem>
+                    <FormLabel className="text-gray-700">Video URL or file</FormLabel>
                     <FormControl>
                       <div className="space-y-4">
+                        {/* URL input first for clarity */}
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Paste video URL: Google Drive, YouTube, Vimeo, or direct .mp4 link"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              if (e.target.value) {
+                                setVideoFile(null);
+                              }
+                            }}
+                            className="border-gray-300"
+                          />
+                          <p className="text-xs text-gray-500">
+                            <strong>Google Drive:</strong> Share the video → &quot;Anyone with the link can view&quot; → copy the link and paste above.
+                          </p>
+                        </div>
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-gray-300" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-white px-2 text-gray-500">Or upload a file</span>
+                          </div>
+                        </div>
                         {/* Drag and Drop Zone */}
                         <div
                           className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-teal-500 transition-colors cursor-pointer bg-gray-50"
@@ -218,25 +247,78 @@ const UploadVideo = () => {
                             )}
                           </div>
                         )}
-                        <div className="relative">
-                          <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-gray-300" />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Thumbnail upload */}
+          <Card className="border border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-gray-900 flex items-center gap-2">
+                <ImageIcon className="w-5 h-5" />
+                Thumbnail
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Upload a cover image for the video card. Shown in the library and on hover. Optional — leave empty to use a fallback.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="thumbnailUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-4 items-start">
+                          <div
+                            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-teal-500 transition-colors cursor-pointer bg-gray-50 min-w-[200px] aspect-video flex flex-col items-center justify-center"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "image/*";
+                              input.onchange = handleThumbnailFileChange as any;
+                              input.click();
+                            }}
+                          >
+                            {field.value && (field.value.startsWith("data:image") || field.value.startsWith("http")) ? (
+                              <img
+                                src={field.value}
+                                alt="Thumbnail preview"
+                                className="w-full h-full object-cover rounded-md"
+                              />
+                            ) : (
+                              <>
+                                <ImageIcon className="w-10 h-10 mx-auto text-gray-400 mb-2" />
+                                <p className="text-sm font-medium text-gray-900">Upload image</p>
+                                <p className="text-xs text-gray-500 mt-1">JPG, PNG, WebP</p>
+                                <p className="text-xs text-gray-500">Max 10MB</p>
+                              </>
+                            )}
                           </div>
-                          <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-white px-2 text-gray-500">Or</span>
+                          <div className="flex-1 space-y-2 w-full">
+                            <Input
+                              placeholder="Or paste thumbnail image URL"
+                              value={typeof field.value === "string" && field.value && !field.value.startsWith("data:") ? field.value : ""}
+                              onChange={(e) => {
+                                setThumbnailFile(null);
+                                field.onChange(e.target.value);
+                              }}
+                              className="border-gray-300"
+                            />
+                            {(field.value && field.value.startsWith("data:image")) && (
+                              <p className="text-xs text-green-600">✓ Image file ready</p>
+                            )}
+                            {thumbnailFile && (
+                              <p className="text-xs text-gray-600">Selected: {thumbnailFile.name}</p>
+                            )}
                           </div>
                         </div>
-                        <Input
-                          placeholder="Enter video URL (YouTube, Vimeo, etc.)"
-                          {...field}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            if (e.target.value) {
-                              setVideoFile(null);
-                            }
-                          }}
-                          className="border-gray-300"
-                        />
                       </div>
                     </FormControl>
                     <FormMessage />

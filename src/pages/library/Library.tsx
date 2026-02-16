@@ -11,10 +11,7 @@ const Library = () => {
   const [categories, setCategories] = useState<string[]>(getPublicCategories());
 
   useEffect(() => {
-    // Scroll to top of the page when component mounts
     window.scrollTo(0, 0);
-    
-    // Reload videos when storage changes
     const interval = setInterval(() => {
       setVideos(getPublicVideos());
       setCategories(getPublicCategories());

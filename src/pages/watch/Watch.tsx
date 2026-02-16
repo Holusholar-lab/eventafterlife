@@ -6,6 +6,7 @@ import { getAdminVideo, incrementVideoViews } from "@/lib/admin-videos";
 import { getActiveRental } from "@/lib/rentals";
 import { Button } from "@/components/ui/button";
 import RentDialog from "@/components/RentDialog";
+import VideoPlayer from "@/components/VideoPlayer";
 
 const Watch = () => {
   const { id } = useParams();
@@ -110,23 +111,23 @@ const Watch = () => {
         /* Video player area */
         <div className="container max-w-5xl py-6">
           <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
-            <img
-              src={publicVideo.image}
-              alt={publicVideo.title}
-              className="w-full h-full object-cover opacity-40"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-20 h-20 rounded-full bg-primary/90 flex items-center justify-center mx-auto mb-4 cursor-pointer hover:bg-primary transition-colors">
-                  <svg className="w-8 h-8 text-primary-foreground ml-1" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
+            <VideoPlayer
+              url={adminVideo.videoUrl}
+              title={publicVideo.title}
+              className="absolute inset-0 w-full h-full"
+              fallback={
+                <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                  <img
+                    src={publicVideo.image}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-40"
+                  />
+                  <div className="relative text-center text-muted-foreground text-sm p-4">
+                    <p>Unable to play this video. Check the video URL in the admin panel.</p>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Video player placeholder — connect your video hosting to stream content
-                </p>
-              </div>
-            </div>
+              }
+            />
           </div>
 
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">

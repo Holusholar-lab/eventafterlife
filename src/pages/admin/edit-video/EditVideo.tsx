@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useNavigate, useParams } from "react-router-dom";
-import { DollarSign, Lock, Unlock } from "lucide-react";
+import { DollarSign, Lock, Unlock, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,7 @@ const formSchema = z.object({
   category: z.string().min(1, "Category is required"),
   duration: z.string().min(1, "Duration is required"),
   videoUrl: z.string().min(1, "Video URL is required"),
-  thumbnailUrl: z.string().min(1, "Thumbnail URL is required"),
+  thumbnailUrl: z.string().optional(),
   price24h: z.number().min(0, "Price must be 0 or greater"),
   price48h: z.number().min(0, "Price must be 0 or greater"),
   price72h: z.number().min(0, "Price must be 0 or greater"),
@@ -35,6 +35,38 @@ const EditVideo = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [video, setVideo] = useState<any>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleThumbnailFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Thumbnail image is too large. Maximum size is 10MB.");
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please select an image file for the thumbnail");
+        return;
+      }
+      setThumbnailFile(file);
+      try {
+        const base64 = await fileToBase64(file);
+        form.setValue("thumbnailUrl", base64);
+        toast.success("Thumbnail image loaded");
+      } catch (err) {
+        toast.error("Failed to process thumbnail");
+      }
+    }
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -89,7 +121,7 @@ const EditVideo = () => {
         category: data.category,
         duration: data.duration,
         videoUrl: data.videoUrl,
-        thumbnailUrl: data.thumbnailUrl,
+        thumbnailUrl: data.thumbnailUrl ?? "",
         price24h: data.price24h,
         price48h: data.price48h,
         price72h: data.price72h,
@@ -206,8 +238,14 @@ const EditVideo = () => {
                   <FormItem>
                     <FormLabel>Video URL</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter video URL" {...field} />
+                      <Input
+                        placeholder="Google Drive, YouTube, Vimeo, or direct .mp4 link"
+                        {...field}
+                      />
                     </FormControl>
+                    <FormDescription>
+                      Paste a share link (e.g. Google Drive: share as &quot;Anyone with the link can view&quot;) or direct video URL. Users will watch this on the site.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -218,10 +256,56 @@ const EditVideo = () => {
                 name="thumbnailUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Thumbnail URL</FormLabel>
+                    <FormLabel>Thumbnail</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter thumbnail URL" {...field} />
+                      <div className="space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-4 items-start">
+                          <div
+                            className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer bg-muted/50 min-w-[200px] aspect-video flex flex-col items-center justify-center overflow-hidden"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "image/*";
+                              input.onchange = handleThumbnailFileChange as any;
+                              input.click();
+                            }}
+                          >
+                            {field.value && (field.value.startsWith("data:image") || field.value.startsWith("http")) ? (
+                              <img
+                                src={field.value}
+                                alt="Thumbnail preview"
+                                className="w-full h-full object-cover rounded-md"
+                              />
+                            ) : (
+                              <>
+                                <ImageIcon className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+                                <p className="text-sm font-medium text-foreground">Upload image</p>
+                                <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP · Max 10MB</p>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-2 w-full">
+                            <Input
+                              placeholder="Or paste thumbnail image URL"
+                              value={typeof field.value === "string" && field.value && !field.value.startsWith("data:") ? field.value : ""}
+                              onChange={(e) => {
+                                setThumbnailFile(null);
+                                field.onChange(e.target.value);
+                              }}
+                            />
+                            {field.value && field.value.startsWith("data:image") && (
+                              <p className="text-xs text-green-600">✓ Image file ready</p>
+                            )}
+                            {thumbnailFile && (
+                              <p className="text-xs text-muted-foreground">Selected: {thumbnailFile.name}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </FormControl>
+                    <FormDescription>
+                      Cover image for the video card. Optional.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
