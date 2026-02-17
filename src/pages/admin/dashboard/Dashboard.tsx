@@ -54,13 +54,13 @@ const Dashboard = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-        <p className="text-gray-600">Overview of your video platform</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-600">Overview of your video platform</p>
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-6 md:grid-cols-4 mb-8">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6 sm:mb-8">
         <Card className="border border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Videos</CardTitle>
@@ -107,7 +107,7 @@ const Dashboard = () => {
       </div>
 
       {/* Traffic & Activity row */}
-      <div className="grid gap-6 md:grid-cols-2 mb-8">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 mb-6 sm:mb-8">
         <Card className="border border-gray-200">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium text-gray-900 flex items-center gap-2">
@@ -151,7 +151,7 @@ const Dashboard = () => {
       </div>
 
       {/* Pending tasks */}
-      <Card className="border border-gray-200 mb-8">
+      <Card className="border border-gray-200 mb-6 sm:mb-8">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium text-gray-900 flex items-center gap-2">
             <Bell className="w-4 h-4" />
@@ -177,8 +177,10 @@ const Dashboard = () => {
               <p>No videos yet. Upload your first video to get started.</p>
             </div>
           ) : (
-            <div className="rounded-md border border-gray-200">
-              <Table>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <div className="inline-block min-w-full align-middle">
+                <div className="rounded-md border border-gray-200 overflow-hidden">
+                  <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="text-gray-700 font-semibold">Title</TableHead>
@@ -220,7 +222,8 @@ const Dashboard = () => {
                     );
                   })}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </div>
           )}
         </CardContent>

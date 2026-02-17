@@ -20,6 +20,8 @@ import {
   Send,
   ChevronDown,
   Tag,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCurrentUser, logout } from "@/lib/auth";
@@ -66,11 +68,17 @@ const AdminLayout = () => {
   const [contentOpen, setContentOpen] = useState(contentOpenPath);
   const [hostsOpen, setHostsOpen] = useState(hostsOpenPath);
   const [communityOpen, setCommunityOpen] = useState(communityOpenPath);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (contentOpenPath) setContentOpen(true);
     if (hostsOpenPath) setHostsOpen(true);
     if (communityOpenPath) setCommunityOpen(true);
+  }, [location.pathname]);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
   }, [location.pathname]);
 
   const navSections = [
@@ -117,9 +125,43 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-[#212B36] text-white overflow-y-auto">
-        <div className="flex flex-col h-full">
-          <div className="p-6 border-b border-gray-700">
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-[#212B36] text-white border-b border-gray-700">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded bg-teal-500 flex items-center justify-center">
+              <Play className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-lg font-bold">Event Afterlife</span>
+          </div>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed left-0 top-0 bottom-0 w-64 bg-[#212B36] text-white overflow-y-auto z-40 transition-transform duration-300",
+          "lg:translate-x-0",
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex flex-col h-full pt-16 lg:pt-0">
+          <div className="p-6 border-b border-gray-700 lg:block hidden">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded bg-teal-500 flex items-center justify-center">
                 <Play className="w-5 h-5 text-white" />
@@ -219,8 +261,8 @@ const AdminLayout = () => {
         </div>
       </aside>
 
-      <main className="ml-64 min-h-screen bg-white">
-        <div className="p-8">
+      <main className="lg:ml-64 min-h-screen bg-white pt-16 lg:pt-0">
+        <div className="p-4 sm:p-6 lg:p-8">
           <Outlet />
         </div>
       </main>

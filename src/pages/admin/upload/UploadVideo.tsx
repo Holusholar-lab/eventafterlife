@@ -491,7 +491,7 @@ const UploadVideo = () => {
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="price48h"
@@ -549,19 +549,19 @@ const UploadVideo = () => {
 
 
           {/* Submit */}
-          <div className="flex gap-4 justify-end">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 justify-end">
             <Button
               type="button"
               variant="outline"
               onClick={() => navigate("/admin/videos")}
-              className="border-gray-300"
+              className="border-gray-300 w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-teal-500 hover:bg-teal-600"
+              className="bg-teal-500 hover:bg-teal-600 w-full sm:w-auto"
             >
               {isSubmitting ? "Uploading..." : "Upload Video"}
             </Button>

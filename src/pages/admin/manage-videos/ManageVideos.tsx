@@ -128,21 +128,21 @@ const ManageVideos = () => {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Videos</h1>
-          <p className="text-gray-600">Manage your video library</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Videos</h1>
+          <p className="text-sm sm:text-base text-gray-600">Manage your video library</p>
         </div>
-        <Button onClick={() => navigate("/admin/upload")} className="bg-teal-500 hover:bg-teal-600">
+        <Button onClick={() => navigate("/admin/upload")} className="bg-teal-500 hover:bg-teal-600 w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Upload New
         </Button>
       </div>
 
       {/* Search and Filter */}
-      <Card className="border border-gray-200 mb-6">
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
+      <Card className="border border-gray-200 mb-4 sm:mb-6">
+        <CardContent className="pt-4 sm:pt-6">
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <Input
@@ -153,7 +153,7 @@ const ManageVideos = () => {
               />
             </div>
             <Select value={accessFilter} onValueChange={setAccessFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="All Access" />
               </SelectTrigger>
               <SelectContent>
@@ -180,8 +180,9 @@ const ManageVideos = () => {
       ) : (
         <Card className="border border-gray-200">
           <CardContent className="p-0">
-            <div className="rounded-md border border-gray-200">
-              <Table>
+            <div className="overflow-x-auto">
+              <div className="rounded-md border border-gray-200 min-w-full">
+                <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="text-gray-700 font-semibold">Video</TableHead>
@@ -283,7 +284,8 @@ const ManageVideos = () => {
                     );
                   })}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </div>
           </CardContent>
         </Card>
