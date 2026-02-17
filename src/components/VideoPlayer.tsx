@@ -34,20 +34,23 @@ export default function VideoPlayer({
         )}
       >
         <p className="text-sm p-4 text-center">
-          This video cannot be played. Check that the URL is a valid YouTube, Vimeo, Google Drive, or direct video link.
+          This video cannot be played. Use a valid Bunny.net, YouTube, Vimeo, Google Drive, or direct video URL.
         </p>
       </div>
     );
   }
 
   if (isEmbedSource(source.type) && source.embedUrl) {
+    const isBunny = source.type === "bunny";
     return (
       <iframe
         src={source.embedUrl}
         title={title}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
+        loading="eager"
         className={cn("w-full h-full min-h-[300px] rounded-lg", className)}
+        referrerPolicy={isBunny ? "strict-origin-when-cross-origin" : undefined}
       />
     );
   }

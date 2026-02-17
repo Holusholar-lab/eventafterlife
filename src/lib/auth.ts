@@ -85,6 +85,11 @@ export function isAuthenticated(): boolean {
   return getCurrentUser() !== null;
 }
 
+/** For admin panel only: returns all registered users. */
+export function getAllUsersForAdmin(): User[] {
+  return getUsers();
+}
+
 function getUsers(): User[] {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");

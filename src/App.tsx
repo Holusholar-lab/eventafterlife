@@ -21,6 +21,7 @@ import PrivacyPolicy from "./pages/privacy-policy";
 import TermsOfService from "./pages/terms-of-service";
 import AboutUs from "./pages/about-us";
 import HowItWorks from "./pages/how-it-works";
+import Profile from "./pages/profile";
 import AdminLayout from "./components/AdminLayout";
 import AdminDashboard from "./pages/admin/dashboard";
 import UploadVideo from "./pages/admin/upload";
@@ -29,6 +30,15 @@ import EditVideo from "./pages/admin/edit-video";
 import Analytics from "./pages/admin/analytics";
 import Settings from "./pages/admin/settings";
 import ManageMessages from "./pages/admin/manage-messages";
+import AdminUsers from "./pages/admin/users";
+import AdminCategories from "./pages/admin/categories";
+import AdminHosts from "./pages/admin/hosts";
+import AdminCommissions from "./pages/admin/commissions";
+import AdminPayments from "./pages/admin/payments";
+import AdminSubscriptions from "./pages/admin/subscriptions";
+import AdminForums from "./pages/admin/forums";
+import AdminComments from "./pages/admin/comments";
+import AdminNewsletter from "./pages/admin/newsletter";
 
 const queryClient = new QueryClient();
 
@@ -56,9 +66,18 @@ const App = () => {
           {/* Admin routes */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
-            <Route path="upload" element={<UploadVideo />} />
+            <Route path="users" element={<AdminUsers />} />
             <Route path="videos" element={<ManageVideos />} />
+            <Route path="upload" element={<UploadVideo />} />
+            <Route path="categories" element={<AdminCategories />} />
             <Route path="videos/edit/:id" element={<EditVideo />} />
+            <Route path="hosts" element={<AdminHosts />} />
+            <Route path="commissions" element={<AdminCommissions />} />
+            <Route path="payments" element={<AdminPayments />} />
+            <Route path="subscriptions" element={<AdminSubscriptions />} />
+            <Route path="forums" element={<AdminForums />} />
+            <Route path="comments" element={<AdminComments />} />
+            <Route path="newsletter" element={<AdminNewsletter />} />
             <Route path="messages" element={<ManageMessages />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />
@@ -170,6 +189,16 @@ const App = () => {
               <>
                 <Navbar />
                 <HowItWorks />
+                <Footer />
+              </>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <>
+                <Navbar />
+                <Profile />
                 <Footer />
               </>
             }

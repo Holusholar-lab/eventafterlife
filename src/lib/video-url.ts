@@ -1,9 +1,26 @@
 /**
  * Detects video URL type and returns embed URL or type for playback.
- * Supports: YouTube, Vimeo, Google Drive, direct video URLs, and base64 (file uploads).
+ * Supports: YouTube, Vimeo, Google Drive, Bunny Stream, direct video URLs, and base64 (file uploads).
  */
 
-export type VideoSourceType = "youtube" | "vimeo" | "drive" | "direct" | "base64" | "unknown";
+export type VideoSourceType = "youtube" | "vimeo" | "drive" | "bunny" | "direct" | "base64" | "unknown";
+
+const BUNNY_EMBED_BASE = "https://iframe.mediadelivery.net/embed";
+
+/** Bunny Stream: iframe.mediadelivery.net/embed/{libraryId}/{videoId} (with or without https) */
+function getBunnyFromUrl(url: string): { libraryId: string; videoId: string } | null {
+  const trimmed = url.trim();
+  const m = trimmed.match(
+    /(?:https?:\/\/)?iframe\.mediadelivery\.net\/embed\/(\d+)\/([0-9a-f-]{36})(?:\?|$)/i
+  );
+  if (m) return { libraryId: m[1], videoId: m[2] };
+  return null;
+}
+
+/** Check if string is a UUID (Bunny video ID) */
+function isBunnyVideoId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim());
+}
 
 export interface VideoSource {
   type: VideoSourceType;
@@ -98,6 +115,26 @@ export function parseVideoUrl(input: string): VideoSource {
     };
   }
 
+  // Bunny Stream: full embed URL or video ID (with VITE_BUNNY_LIBRARY_ID)
+  const bunnyFromUrl = getBunnyFromUrl(trimmed);
+  if (bunnyFromUrl) {
+    return {
+      type: "bunny",
+      embedUrl: `${BUNNY_EMBED_BASE}/${bunnyFromUrl.libraryId}/${bunnyFromUrl.videoId}?preload=true`,
+      src: undefined,
+    };
+  }
+  const bunnyLibraryId = typeof import.meta.env.VITE_BUNNY_LIBRARY_ID === "string"
+    ? import.meta.env.VITE_BUNNY_LIBRARY_ID.trim()
+    : "";
+  if (bunnyLibraryId && isBunnyVideoId(trimmed)) {
+    return {
+      type: "bunny",
+      embedUrl: `${BUNNY_EMBED_BASE}/${bunnyLibraryId}/${trimmed.trim()}?preload=true`,
+      src: undefined,
+    };
+  }
+
   // Direct video URL
   if (isDirectVideoUrl(trimmed) || /^https?:\/\//.test(trimmed)) {
     return { type: "direct", src: trimmed, embedUrl: trimmed };
@@ -107,10 +144,10 @@ export function parseVideoUrl(input: string): VideoSource {
 }
 
 /**
- * Whether this source can be played in an iframe (YouTube, Vimeo, Drive).
+ * Whether this source can be played in an iframe (YouTube, Vimeo, Drive, Bunny).
  */
 export function isEmbedSource(type: VideoSourceType): boolean {
-  return type === "youtube" || type === "vimeo" || type === "drive";
+  return type === "youtube" || type === "vimeo" || type === "drive" || type === "bunny";
 }
 
 /**

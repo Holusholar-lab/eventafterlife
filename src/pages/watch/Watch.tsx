@@ -113,19 +113,29 @@ const Watch = () => {
               title={publicVideo.title}
               className="absolute inset-0 w-full h-full"
               fallback={
-                <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted p-4">
                   <img
                     src={publicVideo.image}
                     alt=""
                     className="absolute inset-0 w-full h-full object-cover opacity-40"
                   />
-                  <div className="relative text-center text-muted-foreground text-sm p-4">
+                  <div className="relative text-center text-muted-foreground text-sm space-y-2 max-w-md">
                     <p>Unable to play this video. Check the video URL in the admin panel.</p>
+                    {adminVideo.videoUrl?.includes("mediadelivery.net") && (
+                      <p className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 rounded p-2">
+                        Bunny.net: Add this site’s domain (e.g. localhost or your domain) in Bunny Dashboard → Stream → your library → Security → Allowed domains.
+                      </p>
+                    )}
                   </div>
                 </div>
               }
             />
           </div>
+          {adminVideo.videoUrl?.includes("mediadelivery.net") && (
+            <p className="text-xs text-muted-foreground mb-4">
+              Video hosted on Bunny.net. If it doesn’t play, add your domain in Bunny Stream → Security → Allowed domains.
+            </p>
+          )}
 
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>

@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { createAdminVideo } from "@/lib/admin-videos";
+import { createAndUploadBunnyVideo, getBunnyLibraryId } from "@/lib/bunny";
 import { toast } from "sonner";
 
 const formSchema = z.object({
@@ -34,8 +35,10 @@ type FormValues = z.infer<typeof formSchema>;
 const UploadVideo = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bunnyUploading, setBunnyUploading] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const bunnyLibraryId = getBunnyLibraryId();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -67,16 +70,13 @@ const UploadVideo = () => {
   const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file size (max 500MB for video)
       const maxSize = 500 * 1024 * 1024; // 500MB
       if (file.size > maxSize) {
         toast.error("Video file is too large. Maximum size is 500MB.");
         return;
       }
-
       setVideoFile(file);
       try {
-        // Convert to base64 for storage
         const base64 = await fileToBase64(file);
         form.setValue("videoUrl", base64);
         toast.success("Video file loaded successfully");
@@ -84,6 +84,26 @@ const UploadVideo = () => {
         toast.error("Failed to process video file");
         console.error(error);
       }
+    }
+  };
+
+  const handleUploadToBunny = async () => {
+    const title = form.getValues("title") || "Untitled";
+    if (!videoFile) {
+      toast.error("Select a video file first, then click Upload to Bunny.net");
+      return;
+    }
+    setBunnyUploading(true);
+    try {
+      const embedUrl = await createAndUploadBunnyVideo(title, videoFile);
+      form.setValue("videoUrl", embedUrl);
+      toast.success("Video uploaded to Bunny.net. Fill in details and save.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Bunny upload failed";
+      toast.error(msg);
+      console.error(err);
+    } finally {
+      setBunnyUploading(false);
     }
   };
 
@@ -161,8 +181,11 @@ const UploadVideo = () => {
             <CardHeader>
               <CardTitle className="text-gray-900">Video source</CardTitle>
               <CardDescription className="text-gray-600">
-                Add a video by pasting a URL (Google Drive, YouTube, Vimeo, or direct link) or by uploading a file.
+                Add a video by pasting a URL (Bunny.net, YouTube, Vimeo, Google Drive, or direct link) or by uploading a file. For Bunny Stream, paste the full embed URL or just the Video ID if VITE_BUNNY_LIBRARY_ID is set in .env.
               </CardDescription>
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3 mt-2">
+                <strong>Videos already on Bunny?</strong> They won’t show on the site until you add them here: paste the Bunny embed URL or Video ID below, fill in title and details, set Access to <strong>Public</strong>, and save.
+              </p>
             </CardHeader>
             <CardContent>
               <FormField
@@ -176,7 +199,7 @@ const UploadVideo = () => {
                         {/* URL input first for clarity */}
                         <div className="space-y-2">
                           <Input
-                            placeholder="Paste video URL: Google Drive, YouTube, Vimeo, or direct .mp4 link"
+                            placeholder="Paste URL: Bunny.net embed, YouTube, Vimeo, Google Drive, or direct .mp4"
                             {...field}
                             onChange={(e) => {
                               field.onChange(e);
@@ -187,7 +210,7 @@ const UploadVideo = () => {
                             className="border-gray-300"
                           />
                           <p className="text-xs text-gray-500">
-                            <strong>Google Drive:</strong> Share the video → &quot;Anyone with the link can view&quot; → copy the link and paste above.
+                            <strong>Bunny.net:</strong> Paste full embed URL (iframe.mediadelivery.net/embed/...) or just the Video ID (GUID). <strong>YouTube/Vimeo/Drive:</strong> paste share link.
                           </p>
                         </div>
                         <div className="relative">
@@ -237,13 +260,25 @@ const UploadVideo = () => {
                           <p className="text-sm text-gray-500">MP4, MOV, AVI up to 2GB</p>
                         </div>
                         {videoFile && (
-                          <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
+                          <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg space-y-2">
                             <p className="text-sm font-medium text-teal-900">Selected: {videoFile.name}</p>
-                            <p className="text-xs text-teal-700 mt-1">
+                            <p className="text-xs text-teal-700">
                               Size: {(videoFile.size / (1024 * 1024)).toFixed(2)} MB
                             </p>
                             {field.value && field.value.startsWith("data:video") && (
-                              <p className="text-xs text-green-600 mt-1">✓ File ready to upload</p>
+                              <p className="text-xs text-green-600">✓ File ready (saved as base64)</p>
+                            )}
+                            {bunnyLibraryId && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="border-teal-600 text-teal-700 hover:bg-teal-50"
+                                onClick={handleUploadToBunny}
+                                disabled={bunnyUploading}
+                              >
+                                {bunnyUploading ? "Uploading to Bunny.net…" : "Upload to Bunny.net"}
+                              </Button>
                             )}
                           </div>
                         )}

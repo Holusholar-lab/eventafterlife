@@ -1,10 +1,22 @@
 import { Link, useLocation } from "react-router-dom";
 import { Play, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { getCurrentUser } from "@/lib/auth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Navbar = () => {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const user = getCurrentUser();
+  const initials = user
+    ? user.fullName
+        .trim()
+        .split(/\s+/)
+        .map((s) => s[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "";
 
   const links = [
     { to: "/", label: "Home" },
@@ -38,15 +50,31 @@ const Navbar = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-4">
-          <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Sign In
-          </Link>
-          <Link
-            to="/signup"
-            className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-          >
-            Get Started
-          </Link>
+          {user ? (
+            <Link
+              to="/profile"
+              className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+              aria-label="Profile"
+            >
+              <Avatar className="h-9 w-9 border-2 border-primary/30">
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+          ) : (
+            <>
+              <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Sign In
+              </Link>
+              <Link
+                to="/signup"
+                className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Get Started
+              </Link>
+            </>
+          )}
         </div>
 
         <button className="md:hidden text-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
@@ -66,12 +94,29 @@ const Navbar = () => {
               {link.label}
             </Link>
           ))}
-          <Link to="/login" className="block text-sm font-medium text-muted-foreground hover:text-primary mb-2">
-            Sign In
-          </Link>
-          <Link to="/signup" className="block px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md text-center">
-            Get Started
-          </Link>
+          {user ? (
+            <Link
+              to="/profile"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-2 py-2 text-sm font-medium text-muted-foreground hover:text-primary"
+            >
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              Profile
+            </Link>
+          ) : (
+            <>
+              <Link to="/login" className="block text-sm font-medium text-muted-foreground hover:text-primary mb-2">
+                Sign In
+              </Link>
+              <Link to="/signup" className="block px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md text-center">
+                Get Started
+              </Link>
+            </>
+          )}
         </div>
       )}
     </nav>

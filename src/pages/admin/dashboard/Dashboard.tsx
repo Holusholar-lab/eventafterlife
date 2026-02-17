@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Video, Eye, DollarSign, Users, TrendingUp } from "lucide-react";
+import { Video, Eye, DollarSign, Users, TrendingUp, Activity, Bell, BarChart2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { getAllAnalytics, getAllAdminVideos } from "@/lib/admin-videos";
+import { getAllUsersForAdmin } from "@/lib/auth";
 import { formatDistanceToNow } from "date-fns";
 
 const Dashboard = () => {
@@ -20,7 +21,8 @@ const Dashboard = () => {
   });
 
   const [recentVideos, setRecentVideos] = useState<any[]>([]);
-  const [subscribers, setSubscribers] = useState(1284);
+  const [subscribers, setSubscribers] = useState(0);
+  const [newThisMonth, setNewThisMonth] = useState(0);
 
   useEffect(() => {
     const stats = getAllAnalytics();
@@ -31,6 +33,12 @@ const Dashboard = () => {
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 5);
     setRecentVideos(sorted);
+
+    const users = getAllUsersForAdmin();
+    setSubscribers(users.length);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    setNewThisMonth(users.filter((u) => u.createdAt >= startOfMonth).length);
   }, []);
 
   const getStatusBadge = (video: any) => {
@@ -93,10 +101,67 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{subscribers.toLocaleString()}</div>
-            <p className="text-xs text-green-600 mt-1">+64 this week</p>
+            <p className="text-xs text-green-600 mt-1">+{newThisMonth} this month</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Traffic & Activity row */}
+      <div className="grid gap-6 md:grid-cols-2 mb-8">
+        <Card className="border border-gray-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium text-gray-900 flex items-center gap-2">
+              <BarChart2 className="w-4 h-4" />
+              Traffic (this month)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-6">
+            <div>
+              <p className="text-2xl font-bold text-gray-900">—</p>
+              <p className="text-xs text-gray-500">Page views</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">—</p>
+              <p className="text-xs text-gray-500">Unique visitors</p>
+            </div>
+            <p className="text-sm text-gray-500">Connect analytics to see traffic stats.</p>
+          </CardContent>
+        </Card>
+        <Card className="border border-gray-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium text-gray-900 flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              Recent activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              {recentVideos.length > 0 ? (
+                recentVideos.slice(0, 3).map((v) => (
+                  <li key={v.id} className="text-gray-600">
+                    New video: <span className="font-medium text-gray-900">{v.title}</span>
+                  </li>
+                ))
+              ) : (
+                <li className="text-gray-500">No recent activity.</li>
+              )}
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Pending tasks */}
+      <Card className="border border-gray-200 mb-8">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium text-gray-900 flex items-center gap-2">
+            <Bell className="w-4 h-4" />
+            Pending / Notifications
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500">No pending tasks. Host applications and reported content will appear here when enabled.</p>
+        </CardContent>
+      </Card>
 
       {/* Recent Videos */}
       <Card className="border border-gray-200">
