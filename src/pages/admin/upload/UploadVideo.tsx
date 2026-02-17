@@ -141,23 +141,33 @@ const UploadVideo = () => {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
+      // Clean and validate URL
+      const cleanedUrl = data.videoUrl.trim().replace(/\s+/g, " ").replace(/\n/g, "").replace(/\r/g, "");
+      
       // Validate URL format (warn but don't block - some URLs might still work)
-      const parsed = parseVideoUrl(data.videoUrl);
+      const parsed = parseVideoUrl(cleanedUrl);
       if (parsed.type === "unknown") {
-        const shouldContinue = window.confirm(
-          `The URL format wasn't recognized. It might still work. Continue anyway?\n\nURL: ${data.videoUrl.substring(0, 100)}`
-        );
+        // Provide helpful error message
+        const urlPreview = cleanedUrl.length > 80 ? cleanedUrl.substring(0, 80) + "..." : cleanedUrl;
+        const errorMsg = `The video URL format wasn't recognized. Please check:\n\n• Bunny.net: Use full embed URL (iframe.mediadelivery.net/embed/LIBRARY_ID/VIDEO_ID) or just the Video ID\n• YouTube: Use share link (youtube.com/watch?v=...) or youtu.be/...\n• Vimeo: Use share link (vimeo.com/...) or direct video URL\n\nURL entered: ${urlPreview}\n\nContinue anyway?`;
+        const shouldContinue = window.confirm(errorMsg);
         if (!shouldContinue) {
           setIsSubmitting(false);
           return;
         }
       }
+      
+      // Use cleaned URL
+      data.videoUrl = cleanedUrl;
+
+      // Set isPublic based on category: only "Public" category makes it public
+      const isPublic = data.category === "Public";
 
       console.log("Creating video with data:", {
         title: data.title,
         category: data.category,
         videoUrl: data.videoUrl.substring(0, 50) + "...",
-        isPublic: data.category === "Public" || data.isPublic,
+        isPublic: isPublic,
       });
 
       await createAdminVideo({
@@ -170,7 +180,7 @@ const UploadVideo = () => {
         price24h: data.price24h,
         price48h: data.price48h,
         price72h: data.price72h,
-        isPublic: data.category === "Public" || data.isPublic,
+        isPublic: isPublic,
         isActive: data.isActive,
       });
 
@@ -209,10 +219,10 @@ const UploadVideo = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload Video</h1>
-        <p className="text-gray-600">Add a new video to your library.</p>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Upload Video</h1>
+        <p className="text-sm sm:text-base text-gray-600">Add a new video to your library.</p>
       </div>
 
       <Form {...form}>
@@ -254,14 +264,19 @@ const UploadVideo = () => {
                                 }
                               }}
                               onChange={(e) => {
-                                const value = e.target.value.trim();
+                                // Clean input: remove extra spaces and newlines
+                                const value = e.target.value
+                                  .replace(/\s+/g, " ")
+                                  .replace(/\n/g, "")
+                                  .replace(/\r/g, "")
+                                  .trim();
                                 setVideoUrlValue(value);
                                 field.onChange({ target: { value } });
                                 if (value) {
                                   setVideoFile(null);
                                 }
                               }}
-                              className="border-gray-300"
+                              className="border-gray-300 text-sm sm:text-base"
                             />
                             {videoUrlValue && (() => {
                               const parsed = parseVideoUrl(videoUrlValue);
@@ -517,6 +532,13 @@ const UploadVideo = () => {
                           <SelectItem value="Subscribers">Subscribers</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormDescription className="text-xs text-gray-500">
+                        {field.value === "Public" ? (
+                          <span className="text-green-600">✓ Video will be visible to all users</span>
+                        ) : (
+                          <span className="text-amber-600">⚠ Video will be hidden from public library</span>
+                        )}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

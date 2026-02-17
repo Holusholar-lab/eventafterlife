@@ -69,7 +69,7 @@ const Watch = () => {
     <div className="pt-16 min-h-screen bg-background">
       {/* Top bar */}
       <div className="bg-card border-b border-border">
-        <div className="container flex items-center justify-between h-12">
+        <div className="container flex items-center justify-between h-12 px-4">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -107,31 +107,31 @@ const Watch = () => {
         </div>
       ) : (
         /* Video player area */
-        <div className="container max-w-5xl py-6">
+        <div className="container max-w-5xl py-4 px-4 sm:py-6">
           {(!adminVideo.videoUrl || !adminVideo.videoUrl.trim() || parseVideoUrl(adminVideo.videoUrl).type === "unknown") ? (
             /* Video source missing or invalid */
-            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-6 mb-6">
-              <div className="flex items-start gap-4">
-                <div className="shrink-0 w-12 h-12 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center">
-                  <VideoOff className="w-6 h-6 text-amber-700 dark:text-amber-200" />
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4 sm:p-6 mb-4 sm:mb-6">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center">
+                  <VideoOff className="w-5 h-5 sm:w-6 sm:h-6 text-amber-700 dark:text-amber-200" />
                 </div>
-                <div>
-                  <h2 className="font-display text-lg font-semibold text-foreground mb-1">Video not available</h2>
-                  <p className="text-sm text-muted-foreground mb-3">
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-display text-base sm:text-lg font-semibold text-foreground mb-1">Video not available</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-3">
                     This video has no valid source or the URL format is not recognized.
                   </p>
-                  <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1 mb-4">
+                  <ul className="text-xs sm:text-sm text-muted-foreground list-disc list-inside space-y-1 mb-4">
                     <li>Go to <strong>Admin → Content → All Videos</strong> and edit this video.</li>
-                    <li>Set <strong>Video URL</strong> to the full Bunny embed link: <code className="text-xs bg-muted px-1 rounded">https://iframe.mediadelivery.net/embed/YOUR_LIBRARY_ID/VIDEO_ID</code></li>
+                    <li>Set <strong>Video URL</strong> to the full Bunny embed link: <code className="text-xs bg-muted px-1 rounded break-all">https://iframe.mediadelivery.net/embed/YOUR_LIBRARY_ID/VIDEO_ID</code></li>
                     <li>Or paste only the <strong>Bunny Video ID</strong> (the GUID) if <code className="text-xs bg-muted px-1 rounded">VITE_BUNNY_LIBRARY_ID</code> is set in your .env file.</li>
                   </ul>
-                  <Link to="/library" className="text-sm text-primary hover:underline">← Back to Library</Link>
+                  <Link to="/library" className="text-xs sm:text-sm text-primary hover:underline">← Back to Library</Link>
                 </div>
               </div>
             </div>
           ) : (
             <>
-              <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6 isolate" style={{ pointerEvents: "auto" }}>
+              <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-4 sm:mb-6 isolate" style={{ pointerEvents: "auto" }}>
                 <VideoPlayer
                   url={adminVideo.videoUrl}
                   title={publicVideo.title}
@@ -143,20 +143,25 @@ const Watch = () => {
                         alt=""
                         className="absolute inset-0 w-full h-full object-cover opacity-40"
                       />
-                      <div className="relative text-center text-muted-foreground text-sm space-y-2 max-w-md">
+                      <div className="relative text-center text-muted-foreground text-sm space-y-2 max-w-md px-4">
                         <p>Unable to play this video. Check the video URL in the admin panel.</p>
+                      </div>
+                    </div>
+                  }
+                />
+              </div>
             </>
           )}
 
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-            <div>
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 px-2 sm:px-0">
+            <div className="flex-1 min-w-0">
               <span className="inline-block px-2 py-0.5 text-xs font-semibold bg-primary text-primary-foreground rounded mb-2">
                 {publicVideo.category}
               </span>
-              <h1 className="font-display text-xl md:text-2xl font-bold text-foreground mb-1">
+              <h1 className="font-display text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-1 break-words">
                 {publicVideo.title}
               </h1>
-              <p className="text-sm text-muted-foreground">{publicVideo.description}</p>
+              <p className="text-sm text-muted-foreground break-words">{publicVideo.description}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary rounded-md text-xs text-muted-foreground">

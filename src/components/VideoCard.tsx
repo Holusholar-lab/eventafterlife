@@ -32,7 +32,7 @@ const VideoCard = ({
   return (
     <div
       onClick={handleClick}
-      className="group relative bg-card rounded-lg overflow-hidden border border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[var(--glow-primary)] cursor-pointer"
+      className="group relative bg-card rounded-lg overflow-hidden border border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[var(--glow-primary)] cursor-pointer w-full"
     >
       <div className="relative aspect-video overflow-hidden bg-muted">
         {/* Thumbnail */}

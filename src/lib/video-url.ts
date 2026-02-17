@@ -85,7 +85,13 @@ export function parseVideoUrl(input: string): VideoSource {
     return { type: "unknown" };
   }
 
-  const trimmed = input.trim();
+  // Clean up the input: remove extra whitespace, newlines, and common mobile copy-paste issues
+  const trimmed = input
+    .trim()
+    .replace(/\s+/g, " ") // Replace multiple spaces with single space
+    .replace(/\n/g, "") // Remove newlines
+    .replace(/\r/g, "") // Remove carriage returns
+    .trim();
 
   // Base64 (e.g. from file upload)
   if (trimmed.startsWith("data:video/")) {

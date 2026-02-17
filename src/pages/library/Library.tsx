@@ -28,15 +28,15 @@ const Library = () => {
 
   return (
     <div className="pt-16">
-      <section className="bg-primary py-12">
-        <div className="container text-center">
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground mb-2">Our Library</h1>
+      <section className="bg-primary py-8 sm:py-12">
+        <div className="container text-center px-4">
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-primary-foreground mb-2">Our Library</h1>
           <p className="text-primary-foreground/80 text-sm">Find the resources you need</p>
         </div>
       </section>
 
-      <section className="container py-10">
-        <div className="flex flex-wrap justify-center gap-3 mb-10">
+      <section className="container py-6 sm:py-10 px-4">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-10">
           {categories.map((cat) => (
             <button
               key={cat}

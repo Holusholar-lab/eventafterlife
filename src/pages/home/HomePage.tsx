@@ -36,22 +36,22 @@ const Index = () => {
   return (
     <div className="pt-16">
       {/* Hero */}
-      <section className="relative h-[85vh] flex items-center justify-center overflow-hidden">
+      <section className="relative h-[70vh] sm:h-[85vh] flex items-center justify-center overflow-hidden">
         <img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0" style={{ background: "var(--hero-overlay)" }} />
-        <div className="relative z-10 text-center max-w-3xl mx-auto px-4 animate-fade-in">
-          <h1 className="font-display text-4xl md:text-6xl font-bold mb-4 text-foreground">
+        <div className="relative z-10 text-center max-w-3xl mx-auto px-4 sm:px-6 animate-fade-in">
+          <h1 className="font-display text-3xl sm:text-4xl md:text-6xl font-bold mb-3 sm:mb-4 text-foreground">
             Welcome to <span className="text-primary">Afterlife</span>
           </h1>
-          <p className="text-muted-foreground text-lg md:text-xl mb-2">
+          <p className="text-muted-foreground text-base sm:text-lg md:text-xl mb-2">
             Every event, idea and conversation deserve more than a single moment.
           </p>
-          <p className="text-muted-foreground text-sm md:text-base mb-8">
+          <p className="text-muted-foreground text-sm sm:text-base mb-6 sm:mb-8">
             Step into a growing library of insights and moments designed to last longer than a single day.
           </p>
           <Link
             to="/library"
-            className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground font-display font-semibold rounded-md hover:bg-primary/90 transition-colors shadow-[var(--glow-primary)]"
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-primary text-primary-foreground font-display font-semibold rounded-md hover:bg-primary/90 transition-colors shadow-[var(--glow-primary)] text-sm sm:text-base"
           >
             Access Our Library
             <ChevronRight className="w-4 h-4" />
@@ -60,14 +60,14 @@ const Index = () => {
       </section>
 
       {/* Available Now */}
-      <section className="container py-16">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="font-display text-2xl font-bold text-foreground">Available Now</h2>
+      <section className="container py-10 sm:py-16 px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
+          <h2 className="font-display text-xl sm:text-2xl font-bold text-foreground">Available Now</h2>
           <Link to="/library" className="text-sm text-primary hover:underline flex items-center gap-1">
             See All <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {videos.length > 0 ? (
             videos.slice(0, 4).map((video) => (
               <VideoCard key={video.id} {...video} onRent={handleRent} />
@@ -81,15 +81,15 @@ const Index = () => {
       </section>
 
       {/* How It Works */}
-      <section className="bg-secondary py-16">
-        <div className="container">
+      <section className="bg-secondary py-10 sm:py-16">
+        <div className="container px-4 sm:px-6">
           <div className="inline-block px-3 py-1 border border-border rounded text-xs font-medium text-muted-foreground mb-4">
             How it Works
           </div>
-          <h2 className="font-display text-3xl font-bold mb-12">
+          <h2 className="font-display text-2xl sm:text-3xl font-bold mb-8 sm:mb-12">
             From Event to <span className="text-primary">Evergreen</span>
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             {[
               {
                 icon: BookOpen,

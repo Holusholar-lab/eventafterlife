@@ -72,7 +72,7 @@ export default function VideoPlayer({
     if (source.embedUrl) {
       return (
         <div
-          className={cn("relative w-full h-full min-h-[300px]", className)}
+          className={cn("relative w-full h-full min-h-[200px] sm:min-h-[300px]", className)}
           style={{ pointerEvents: "auto", zIndex: 0 }}
         >
           <iframe
@@ -82,7 +82,7 @@ export default function VideoPlayer({
             allowFullScreen
             loading="eager"
             className="absolute inset-0 w-full h-full rounded-lg"
-            style={{ border: "none", pointerEvents: "auto" }}
+            style={{ border: "none", pointerEvents: "auto", width: "100%", height: "100%" }}
           />
         </div>
       );
