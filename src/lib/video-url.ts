@@ -7,19 +7,23 @@ export type VideoSourceType = "youtube" | "vimeo" | "drive" | "bunny" | "direct"
 
 const BUNNY_EMBED_BASE = "https://iframe.mediadelivery.net/embed";
 
-/** Bunny Stream: iframe.mediadelivery.net/embed/{libraryId}/{videoId} (with or without https) */
+/** Bunny Stream: iframe.mediadelivery.net/embed/{libraryId}/{videoId} or player.mediadelivery.net/embed/... */
 function getBunnyFromUrl(url: string): { libraryId: string; videoId: string } | null {
   const trimmed = url.trim();
+  // Match: iframe.mediadelivery.net/embed/... or player.mediadelivery.net/embed/...
+  // Library ID: one or more digits
+  // Video ID: UUID format (8-4-4-4-12 hex chars with hyphens) = 36 chars total
   const m = trimmed.match(
-    /(?:https?:\/\/)?iframe\.mediadelivery\.net\/embed\/(\d+)\/([0-9a-f-]{36})(?:\?|$)/i
+    /(?:https?:\/\/)?(?:iframe|player)\.mediadelivery\.net\/embed\/(\d+)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\?.*|\/?)?$/i
   );
   if (m) return { libraryId: m[1], videoId: m[2] };
   return null;
 }
 
-/** Check if string is a UUID (Bunny video ID) */
+/** Check if string is a UUID (Bunny video ID), optionally with surrounding whitespace or query params */
 function isBunnyVideoId(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim());
+  const trimmed = value.trim().split("?")[0].trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
 }
 
 export interface VideoSource {
@@ -116,27 +120,39 @@ export function parseVideoUrl(input: string): VideoSource {
   }
 
   // Bunny Stream: full embed URL or video ID (with VITE_BUNNY_LIBRARY_ID)
+  const bunnyParams = "preload=true&playsinline=true";
+  const bunnyCdnHost = typeof import.meta.env.VITE_BUNNY_CDN_HOST === "string"
+    ? import.meta.env.VITE_BUNNY_CDN_HOST.trim().replace(/\/$/, "")
+    : "";
+  // Bunny Stream direct MP4 format: {pullZoneHost}/{videoId}/play_{resolution}p.mp4
+  // Try multiple resolutions as fallback
+  const toBunnyDirectSrc = (videoId: string): string | undefined =>
+    bunnyCdnHost ? `${bunnyCdnHost}/${videoId}/play_720p.mp4` : undefined;
+
   const bunnyFromUrl = getBunnyFromUrl(trimmed);
   if (bunnyFromUrl) {
     return {
       type: "bunny",
-      embedUrl: `${BUNNY_EMBED_BASE}/${bunnyFromUrl.libraryId}/${bunnyFromUrl.videoId}?preload=true`,
-      src: undefined,
+      embedUrl: `${BUNNY_EMBED_BASE}/${bunnyFromUrl.libraryId}/${bunnyFromUrl.videoId}?${bunnyParams}`,
+      src: toBunnyDirectSrc(bunnyFromUrl.videoId),
     };
   }
   const bunnyLibraryId = typeof import.meta.env.VITE_BUNNY_LIBRARY_ID === "string"
     ? import.meta.env.VITE_BUNNY_LIBRARY_ID.trim()
     : "";
   if (bunnyLibraryId && isBunnyVideoId(trimmed)) {
+    const videoIdOnly = trimmed.trim().split("?")[0].trim();
     return {
       type: "bunny",
-      embedUrl: `${BUNNY_EMBED_BASE}/${bunnyLibraryId}/${trimmed.trim()}?preload=true`,
-      src: undefined,
+      embedUrl: `${BUNNY_EMBED_BASE}/${bunnyLibraryId}/${videoIdOnly}?${bunnyParams}`,
+      src: toBunnyDirectSrc(videoIdOnly),
     };
   }
 
-  // Direct video URL
-  if (isDirectVideoUrl(trimmed) || /^https?:\/\//.test(trimmed)) {
+  // Direct video URL (exclude known embed URLs)
+  // Don't treat embed URLs (iframe.mediadelivery.net, player.mediadelivery.net, youtube.com/embed, etc.) as direct video URLs
+  const isEmbedUrlPattern = /(?:iframe|player)\.mediadelivery\.net\/embed|youtube\.com\/embed|player\.vimeo\.com\/video|drive\.google\.com\/file\/d\/.*\/preview/i;
+  if (!isEmbedUrlPattern.test(trimmed) && (isDirectVideoUrl(trimmed) || /^https?:\/\//.test(trimmed))) {
     return { type: "direct", src: trimmed, embedUrl: trimmed };
   }
 

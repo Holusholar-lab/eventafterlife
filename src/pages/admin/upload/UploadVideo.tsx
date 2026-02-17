@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { createAdminVideo } from "@/lib/admin-videos";
 import { createAndUploadBunnyVideo, getBunnyLibraryId } from "@/lib/bunny";
+import { parseVideoUrl } from "@/lib/video-url";
 import { toast } from "sonner";
 
 const formSchema = z.object({
@@ -39,6 +40,7 @@ const UploadVideo = () => {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const bunnyLibraryId = getBunnyLibraryId();
+  const [videoUrlValue, setVideoUrlValue] = useState("");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -139,13 +141,32 @@ const UploadVideo = () => {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
+      // Validate URL format (warn but don't block - some URLs might still work)
+      const parsed = parseVideoUrl(data.videoUrl);
+      if (parsed.type === "unknown") {
+        const shouldContinue = window.confirm(
+          `The URL format wasn't recognized. It might still work. Continue anyway?\n\nURL: ${data.videoUrl.substring(0, 100)}`
+        );
+        if (!shouldContinue) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      console.log("Creating video with data:", {
+        title: data.title,
+        category: data.category,
+        videoUrl: data.videoUrl.substring(0, 50) + "...",
+        isPublic: data.category === "Public" || data.isPublic,
+      });
+
       await createAdminVideo({
         title: data.title,
         description: data.description,
         category: data.category,
         duration: data.duration || "0 min",
-        videoUrl: data.videoUrl,
-        thumbnailUrl: data.thumbnailUrl || "",
+        videoUrl: data.videoUrl.trim(),
+        thumbnailUrl: (data.thumbnailUrl || "").trim(),
         price24h: data.price24h,
         price48h: data.price48h,
         price72h: data.price72h,
@@ -157,10 +178,31 @@ const UploadVideo = () => {
       form.reset();
       setVideoFile(null);
       setThumbnailFile(null);
+      setVideoUrlValue("");
       navigate("/admin/videos");
     } catch (error) {
-      toast.error("Failed to upload video");
-      console.error(error);
+      let errorMessage = "Failed to upload video";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error && typeof error === "object") {
+        // Handle Supabase errors or other object errors
+        if ("message" in error && typeof error.message === "string") {
+          errorMessage = error.message;
+        } else if ("error" in error && typeof error.error === "string") {
+          errorMessage = error.error;
+        } else if ("details" in error && typeof error.details === "string") {
+          errorMessage = error.details;
+        } else {
+          errorMessage = JSON.stringify(error);
+        }
+      } else {
+        errorMessage = String(error);
+      }
+      toast.error(`Failed to upload video: ${errorMessage}`, { duration: 5000 });
+      console.error("Upload error details:", error);
+      if (error && typeof error === "object") {
+        console.error("Full error object:", JSON.stringify(error, null, 2));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -198,19 +240,50 @@ const UploadVideo = () => {
                       <div className="space-y-4">
                         {/* URL input first for clarity */}
                         <div className="space-y-2">
-                          <Input
-                            placeholder="Paste URL: Bunny.net embed, YouTube, Vimeo, Google Drive, or direct .mp4"
-                            {...field}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              if (e.target.value) {
-                                setVideoFile(null);
+                          <div className="relative">
+                            <Input
+                              placeholder="Paste URL: Bunny.net embed, YouTube, Vimeo, Google Drive, or direct .mp4"
+                              {...field}
+                              value={videoUrlValue || field.value}
+                              onPaste={(e) => {
+                                const pasted = e.clipboardData.getData("text").trim();
+                                if (pasted) {
+                                  setVideoUrlValue(pasted);
+                                  field.onChange({ target: { value: pasted } });
+                                  setVideoFile(null);
+                                }
+                              }}
+                              onChange={(e) => {
+                                const value = e.target.value.trim();
+                                setVideoUrlValue(value);
+                                field.onChange({ target: { value } });
+                                if (value) {
+                                  setVideoFile(null);
+                                }
+                              }}
+                              className="border-gray-300"
+                            />
+                            {videoUrlValue && (() => {
+                              const parsed = parseVideoUrl(videoUrlValue);
+                              if (parsed.type === "bunny") {
+                                return (
+                                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">✓ Bunny URL detected</span>
+                                  </div>
+                                );
                               }
-                            }}
-                            className="border-gray-300"
-                          />
+                              if (parsed.type === "unknown" && videoUrlValue.trim()) {
+                                return (
+                                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">⚠ Check URL format</span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
                           <p className="text-xs text-gray-500">
-                            <strong>Bunny.net:</strong> Paste full embed URL (iframe.mediadelivery.net/embed/...) or just the Video ID (GUID). <strong>YouTube/Vimeo/Drive:</strong> paste share link.
+                            <strong>Bunny.net:</strong> Paste full embed URL (<code className="text-xs bg-gray-100 px-1 rounded">iframe.mediadelivery.net/embed/LIBRARY_ID/VIDEO_ID</code>) or just the Video ID (GUID). <strong>YouTube/Vimeo/Drive:</strong> paste share link.
                           </p>
                         </div>
                         <div className="relative">

@@ -1,9 +1,10 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Clock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Clock, AlertTriangle, VideoOff } from "lucide-react";
 import { getPublicVideo } from "@/lib/public-videos";
 import { getAdminVideo, incrementVideoViews } from "@/lib/admin-videos";
 import { getActiveRental } from "@/lib/rentals";
+import { parseVideoUrl } from "@/lib/video-url";
 import { Button } from "@/components/ui/button";
 import RentDialog from "@/components/RentDialog";
 import VideoPlayer from "@/components/VideoPlayer";
@@ -107,34 +108,44 @@ const Watch = () => {
       ) : (
         /* Video player area */
         <div className="container max-w-5xl py-6">
-          <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
-            <VideoPlayer
-              url={adminVideo.videoUrl}
-              title={publicVideo.title}
-              className="absolute inset-0 w-full h-full"
-              fallback={
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted p-4">
-                  <img
-                    src={publicVideo.image}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover opacity-40"
-                  />
-                  <div className="relative text-center text-muted-foreground text-sm space-y-2 max-w-md">
-                    <p>Unable to play this video. Check the video URL in the admin panel.</p>
-                    {adminVideo.videoUrl?.includes("mediadelivery.net") && (
-                      <p className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 rounded p-2">
-                        Bunny.net: Add this site’s domain (e.g. localhost or your domain) in Bunny Dashboard → Stream → your library → Security → Allowed domains.
-                      </p>
-                    )}
-                  </div>
+          {(!adminVideo.videoUrl || !adminVideo.videoUrl.trim() || parseVideoUrl(adminVideo.videoUrl).type === "unknown") ? (
+            /* Video source missing or invalid */
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-6 mb-6">
+              <div className="flex items-start gap-4">
+                <div className="shrink-0 w-12 h-12 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center">
+                  <VideoOff className="w-6 h-6 text-amber-700 dark:text-amber-200" />
                 </div>
-              }
-            />
-          </div>
-          {adminVideo.videoUrl?.includes("mediadelivery.net") && (
-            <p className="text-xs text-muted-foreground mb-4">
-              Video hosted on Bunny.net. If it doesn’t play, add your domain in Bunny Stream → Security → Allowed domains.
-            </p>
+                <div>
+                  <h2 className="font-display text-lg font-semibold text-foreground mb-1">Video not available</h2>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    This video has no valid source or the URL format is not recognized.
+                  </p>
+                  <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1 mb-4">
+                    <li>Go to <strong>Admin → Content → All Videos</strong> and edit this video.</li>
+                    <li>Set <strong>Video URL</strong> to the full Bunny embed link: <code className="text-xs bg-muted px-1 rounded">https://iframe.mediadelivery.net/embed/YOUR_LIBRARY_ID/VIDEO_ID</code></li>
+                    <li>Or paste only the <strong>Bunny Video ID</strong> (the GUID) if <code className="text-xs bg-muted px-1 rounded">VITE_BUNNY_LIBRARY_ID</code> is set in your .env file.</li>
+                  </ul>
+                  <Link to="/library" className="text-sm text-primary hover:underline">← Back to Library</Link>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6 isolate" style={{ pointerEvents: "auto" }}>
+                <VideoPlayer
+                  url={adminVideo.videoUrl}
+                  title={publicVideo.title}
+                  className="absolute inset-0 w-full h-full min-h-0"
+                  fallback={
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted p-4">
+                      <img
+                        src={publicVideo.image}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover opacity-40"
+                      />
+                      <div className="relative text-center text-muted-foreground text-sm space-y-2 max-w-md">
+                        <p>Unable to play this video. Check the video URL in the admin panel.</p>
+            </>
           )}
 
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">

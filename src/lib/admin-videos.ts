@@ -199,7 +199,10 @@ export async function createAdminVideo(
       rentals: 0,
       revenue: 0,
     });
-    if (error) throw error;
+    if (error) {
+      const errorMsg = error.message || error.details || JSON.stringify(error);
+      throw new Error(`Supabase error: ${errorMsg}`);
+    }
     _cache = _cache ? [newVideo, ..._cache] : [newVideo];
     return newVideo;
   }
