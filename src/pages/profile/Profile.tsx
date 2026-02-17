@@ -95,8 +95,8 @@ const Profile = () => {
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
           <button
             type="button"
-            onClick={() => {
-              logout();
+            onClick={async () => {
+              await logout();
               window.location.href = "/";
             }}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-destructive hover:text-destructive/90 border border-destructive/50 rounded-md hover:bg-destructive/10 transition-colors"

@@ -103,6 +103,8 @@ export async function login(email: string, password: string): Promise<{ success:
           newsletter: data.newsletter,
           createdAt: data.created_at,
         };
+        // So getCurrentUser() can find the user (it reads from localStorage)
+        saveUserToLocalStorage(user);
         return { success: true, user };
       }
     } catch (error) {
@@ -149,21 +151,24 @@ export async function logout(): Promise<void> {
  * Synchronous version for backward compatibility (checks localStorage only)
  */
 export function getCurrentUser(): User | null {
-  // Try localStorage first (for immediate access)
   try {
     const sessionId = localStorage.getItem(SESSION_KEY);
     if (!sessionId) return null;
 
     const users = getUsers();
-    const user = users.find((u) => u.id === sessionId) || null;
-    
-    // If Supabase is available, verify session in background
-    if (user && supabase) {
-      verifySupabaseSession(sessionId).catch(() => {
-        // Session invalid, will be cleared on next page load
-      });
+    // Match by exact id (localStorage session) or by Supabase token: token = userId_timestamp_random
+    let user = users.find((u) => u.id === sessionId) || null;
+    if (!user && sessionId.includes("_")) {
+      const parts = sessionId.split("_");
+      if (parts.length >= 3 && /^\d+$/.test(parts[parts.length - 2])) {
+        const userId = parts.slice(0, -2).join("_");
+        user = users.find((u) => u.id === userId) || null;
+      }
     }
-    
+
+    if (user && supabase) {
+      verifySupabaseSession(sessionId).catch(() => {});
+    }
     return user;
   } catch {
     return null;
