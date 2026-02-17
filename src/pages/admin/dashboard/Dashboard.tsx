@@ -25,20 +25,23 @@ const Dashboard = () => {
   const [newThisMonth, setNewThisMonth] = useState(0);
 
   useEffect(() => {
-    const stats = getAllAnalytics();
-    setAnalytics(stats);
+    const loadData = async () => {
+      const stats = getAllAnalytics();
+      setAnalytics(stats);
 
-    const videos = getAllAdminVideos();
-    const sorted = [...videos]
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 5);
-    setRecentVideos(sorted);
+      const videos = getAllAdminVideos();
+      const sorted = [...videos]
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 5);
+      setRecentVideos(sorted);
 
-    const users = getAllUsersForAdmin();
-    setSubscribers(users.length);
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    setNewThisMonth(users.filter((u) => u.createdAt >= startOfMonth).length);
+      const users = await getAllUsersForAdmin();
+      setSubscribers(users.length);
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      setNewThisMonth(users.filter((u) => u.createdAt >= startOfMonth).length);
+    };
+    loadData();
   }, []);
 
   const getStatusBadge = (video: any) => {
@@ -137,11 +140,13 @@ const Dashboard = () => {
           <CardContent>
             <ul className="space-y-2 text-sm">
               {recentVideos.length > 0 ? (
-                recentVideos.slice(0, 3).map((v) => (
-                  <li key={v.id} className="text-gray-600">
-                    New video: <span className="font-medium text-gray-900">{v.title}</span>
-                  </li>
-                ))
+                <>
+                  {recentVideos.slice(0, 3).map((v) => (
+                    <li key={v.id} className="text-gray-600">
+                      New video: <span className="font-medium text-gray-900">{v.title}</span>
+                    </li>
+                  ))}
+                </>
               ) : (
                 <li className="text-gray-500">No recent activity.</li>
               )}
@@ -181,48 +186,49 @@ const Dashboard = () => {
               <div className="inline-block min-w-full align-middle">
                 <div className="rounded-md border border-gray-200 overflow-hidden">
                   <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="text-gray-700 font-semibold">Title</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Status</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Access</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Views</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Revenue</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentVideos.map((video) => {
-                    const status = getStatusBadge(video);
-                    return (
-                      <TableRow key={video.id} className="hover:bg-gray-50">
-                        <TableCell className="font-medium text-gray-900">
-                          <div>
-                            <div>{video.title}</div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {video.duration} • {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={status.variant}
-                            className={
-                              status.label === "published"
-                                ? "bg-green-100 text-green-800 border-green-200"
-                                : "bg-gray-100 text-gray-800 border-gray-200"
-                            }
-                          >
-                            {status.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-gray-600">{getAccessLabel(video)}</TableCell>
-                        <TableCell className="text-gray-900">{video.views.toLocaleString()}</TableCell>
-                        <TableCell className="font-medium text-gray-900">${video.revenue.toFixed(2)}</TableCell>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="text-gray-700 font-semibold">Title</TableHead>
+                        <TableHead className="text-gray-700 font-semibold">Status</TableHead>
+                        <TableHead className="text-gray-700 font-semibold">Access</TableHead>
+                        <TableHead className="text-gray-700 font-semibold">Views</TableHead>
+                        <TableHead className="text-gray-700 font-semibold">Revenue</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {recentVideos.map((video) => {
+                        const status = getStatusBadge(video);
+                        return (
+                          <TableRow key={video.id} className="hover:bg-gray-50">
+                            <TableCell className="font-medium text-gray-900">
+                              <div>
+                                <div>{video.title}</div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {video.duration} • {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={status.variant}
+                                className={
+                                  status.label === "published"
+                                    ? "bg-green-100 text-green-800 border-green-200"
+                                    : "bg-gray-100 text-gray-800 border-gray-200"
+                                }
+                              >
+                                {status.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-gray-600">{getAccessLabel(video)}</TableCell>
+                            <TableCell className="text-gray-900">{video.views.toLocaleString()}</TableCell>
+                            <TableCell className="font-medium text-gray-900">${video.revenue.toFixed(2)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </div>
           )}

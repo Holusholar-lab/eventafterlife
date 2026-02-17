@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { ArrowLeft, Clock, AlertTriangle, VideoOff } from "lucide-react";
-import { getPublicVideo } from "@/lib/public-videos";
+import { getPublicVideo, refreshAndGetPublicVideos } from "@/lib/public-videos";
 import { getAdminVideo, incrementVideoViews } from "@/lib/admin-videos";
 import { getActiveRental } from "@/lib/rentals";
 import { parseVideoUrl } from "@/lib/video-url";
@@ -12,11 +12,30 @@ import VideoPlayer from "@/components/VideoPlayer";
 const Watch = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const publicVideo = getPublicVideo(id || "");
-  const adminVideo = id ? getAdminVideo(id) : null;
+  const [publicVideo, setPublicVideo] = useState(() => getPublicVideo(id || ""));
+  const [adminVideo, setAdminVideo] = useState(() => (id ? getAdminVideo(id) : null));
+  const [refetching, setRefetching] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [expired, setExpired] = useState(false);
   const [rentOpen, setRentOpen] = useState(false);
+
+  // Refetch from backend when video not found (so new admin uploads are visible via direct link)
+  useEffect(() => {
+    if (!id) return;
+    const pv = getPublicVideo(id);
+    const av = getAdminVideo(id);
+    if (pv && av) {
+      setPublicVideo(pv);
+      setAdminVideo(av);
+      return;
+    }
+    setRefetching(true);
+    refreshAndGetPublicVideos().then(() => {
+      setPublicVideo(getPublicVideo(id));
+      setAdminVideo(getAdminVideo(id));
+      setRefetching(false);
+    });
+  }, [id]);
 
   useEffect(() => {
     if (!adminVideo) return;
@@ -46,10 +65,16 @@ const Watch = () => {
     return (
       <div className="pt-16 min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="font-display text-2xl font-bold text-foreground mb-2">Video not found</h1>
-          <Link to="/library" className="text-primary hover:underline text-sm">
-            Back to Library
-          </Link>
+          {refetching ? (
+            <p className="text-muted-foreground text-sm">Loading video…</p>
+          ) : (
+            <>
+              <h1 className="font-display text-2xl font-bold text-foreground mb-2">Video not found</h1>
+              <Link to="/library" className="text-primary hover:underline text-sm">
+                Back to Library
+              </Link>
+            </>
+          )}
         </div>
       </div>
     );
@@ -133,7 +158,7 @@ const Watch = () => {
             <>
               <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-4 sm:mb-6 isolate" style={{ pointerEvents: "auto" }}>
                 <VideoPlayer
-                  url={adminVideo.videoUrl}
+                  url={(adminVideo.videoUrl || "").trim()}
                   title={publicVideo.title}
                   className="absolute inset-0 w-full h-full min-h-0"
                   fallback={
@@ -144,7 +169,11 @@ const Watch = () => {
                         className="absolute inset-0 w-full h-full object-cover opacity-40"
                       />
                       <div className="relative text-center text-muted-foreground text-sm space-y-2 max-w-md px-4">
-                        <p>Unable to play this video. Check the video URL in the admin panel.</p>
+                        <p>Unable to play this video.</p>
+                        <p className="text-xs">
+                          If this is a Bunny.net video: in Bunny Dashboard go to <strong>Stream → your library → Security</strong> and add this site’s domain (e.g. <strong>eventafterlife.vercel.app</strong> or <strong>localhost</strong>) to <strong>Allowed domains</strong>. Then refresh this page.
+                        </p>
+                        <p className="text-xs">Otherwise check the Video URL in Admin → Videos.</p>
                       </div>
                     </div>
                   }

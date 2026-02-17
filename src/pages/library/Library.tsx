@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import VideoCard from "@/components/VideoCard";
 import RentDialog from "@/components/RentDialog";
-import { getPublicVideos, getPublicVideosByCategory, getPublicCategories, PublicVideo } from "@/lib/public-videos";
+import { getPublicVideos, getPublicVideosByCategory, getPublicCategories, refreshAndGetPublicVideos, PublicVideo } from "@/lib/public-videos";
+import { getVideosLoadError } from "@/lib/admin-videos";
 
 const Library = () => {
   const [active, setActive] = useState("All");
@@ -9,13 +10,19 @@ const Library = () => {
   const [selectedVideo, setSelectedVideo] = useState<{ id: string; title: string; image: string; price: string } | null>(null);
   const [videos, setVideos] = useState<PublicVideo[]>(getPublicVideos());
   const [categories, setCategories] = useState<string[]>(getPublicCategories());
+  const [loadError, setLoadError] = useState<string | null>(getVideosLoadError());
 
+  // Keep library in sync with admin uploads (refetch from backend every 30s so new videos appear for everyone)
   useEffect(() => {
     window.scrollTo(0, 0);
-    const interval = setInterval(() => {
-      setVideos(getPublicVideos());
+    const refresh = async () => {
+      const next = await refreshAndGetPublicVideos();
+      setVideos(next);
       setCategories(getPublicCategories());
-    }, 1000);
+      setLoadError(getVideosLoadError());
+    };
+    refresh();
+    const interval = setInterval(refresh, 30_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -36,6 +43,13 @@ const Library = () => {
       </section>
 
       <section className="container py-6 sm:py-10 px-4">
+        {loadError && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 text-sm text-amber-800 dark:text-amber-200">
+            <p className="font-medium">Could not load videos from the server.</p>
+            <p className="mt-1 opacity-90">{loadError}</p>
+            <p className="mt-2 text-xs opacity-80">Make sure this app is deployed with Supabase env vars (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) so all devices see the same content.</p>
+          </div>
+        )}
         <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-10">
           {categories.map((cat) => (
             <button

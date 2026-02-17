@@ -1,10 +1,15 @@
+/**
+ * Hybrid authentication: Uses Supabase when available for cross-device sync,
+ * falls back to localStorage when Supabase is not configured
+ */
+
 import { supabase } from "./supabase";
 
 export interface User {
   id: string;
   fullName: string;
   email: string;
-  password: string; // In production, this should be hashed
+  password: string;
   newsletter: boolean;
   createdAt: number;
 }
@@ -13,7 +18,7 @@ const STORAGE_KEY = "afterlife_users";
 const SESSION_KEY = "afterlife_session";
 
 /**
- * Sign up - Uses Supabase for cross-device sync when available
+ * Sign up - tries Supabase first, falls back to localStorage
  */
 export async function signUp(
   fullName: string,
@@ -26,7 +31,8 @@ export async function signUp(
     try {
       const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const now = Date.now();
-      const passwordHash = btoa(password); // Simple encoding (use proper hashing in production)
+      // Simple password encoding (use proper hashing in production)
+      const passwordHash = btoa(password);
 
       const { error } = await supabase.from("users").insert({
         id: userId,
@@ -38,24 +44,25 @@ export async function signUp(
         updated_at: now,
       });
 
-      if (!error) {
+      if (error) {
+        if (error.code === "23505") {
+          return { success: false, error: "Email already registered" };
+        }
+        // If Supabase fails, fall back to localStorage
+        console.warn("Supabase signup failed, using localStorage:", error);
+      } else {
+        // Success in Supabase - create session
         await createSupabaseSession(userId);
-        // Also save to localStorage for backward compatibility
-        saveUserToLocalStorage({ id: userId, fullName, email: email.toLowerCase(), password, newsletter, createdAt: now });
         return { success: true };
       }
-      
-      if (error.code === "23505") {
-        return { success: false, error: "Email already registered" };
-      }
     } catch (error) {
-      console.warn("Supabase signup failed, using localStorage:", error);
+      console.warn("Supabase signup error, falling back to localStorage:", error);
     }
   }
 
   // Fallback to localStorage
   try {
-    const users = getUsers();
+    const users = getUsersFromStorage();
     if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
       return { success: false, error: "Email already registered" };
     }
@@ -81,9 +88,12 @@ export async function signUp(
 }
 
 /**
- * Login - Uses Supabase for cross-device sync when available
+ * Login - tries Supabase first, falls back to localStorage
  */
-export async function login(email: string, password: string): Promise<{ success: boolean; error?: string; user?: User }> {
+export async function login(
+  email: string,
+  password: string
+): Promise<{ success: boolean; error?: string; user?: User }> {
   // Try Supabase first
   if (supabase) {
     try {
@@ -93,17 +103,22 @@ export async function login(email: string, password: string): Promise<{ success:
         .eq("email", email.toLowerCase())
         .single();
 
-      if (!error && data && btoa(password) === data.password_hash) {
-        await createSupabaseSession(data.id);
-        const user: User = {
-          id: data.id,
-          fullName: data.full_name,
-          email: data.email,
-          password: "",
-          newsletter: data.newsletter,
-          createdAt: data.created_at,
-        };
-        return { success: true, user };
+      if (!error && data) {
+        // Verify password
+        if (btoa(password) === data.password_hash) {
+          await createSupabaseSession(data.id);
+          return {
+            success: true,
+            user: {
+              id: data.id,
+              fullName: data.full_name,
+              email: data.email,
+              password: "",
+              newsletter: data.newsletter,
+              createdAt: data.created_at,
+            },
+          };
+        }
       }
     } catch (error) {
       console.warn("Supabase login error, trying localStorage:", error);
@@ -112,7 +127,7 @@ export async function login(email: string, password: string): Promise<{ success:
 
   // Fallback to localStorage
   try {
-    const users = getUsers();
+    const users = getUsersFromStorage();
     const user = users.find(
       (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
     );
@@ -130,55 +145,15 @@ export async function login(email: string, password: string): Promise<{ success:
 }
 
 /**
- * Logout - Clears Supabase session and localStorage
+ * Get current user - tries Supabase session first, falls back to localStorage
  */
-export async function logout(): Promise<void> {
-  const token = localStorage.getItem(SESSION_KEY);
-  if (token && supabase && token.includes("_")) {
-    try {
-      await supabase.from("user_sessions").delete().eq("token", token);
-    } catch (error) {
-      console.warn("Supabase logout error:", error);
-    }
-  }
-  localStorage.removeItem(SESSION_KEY);
-}
-
-/**
- * Get current user - Checks Supabase session first, falls back to localStorage
- * Synchronous version for backward compatibility (checks localStorage only)
- */
-export function getCurrentUser(): User | null {
-  // Try localStorage first (for immediate access)
-  try {
-    const sessionId = localStorage.getItem(SESSION_KEY);
-    if (!sessionId) return null;
-
-    const users = getUsers();
-    const user = users.find((u) => u.id === sessionId) || null;
-    
-    // If Supabase is available, verify session in background
-    if (user && supabase) {
-      verifySupabaseSession(sessionId).catch(() => {
-        // Session invalid, will be cleared on next page load
-      });
-    }
-    
-    return user;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Get current user async - Checks Supabase session first for cross-device sync
- */
-export async function getCurrentUserAsync(): Promise<User | null> {
+export async function getCurrentUser(): Promise<User | null> {
   // Try Supabase session first
   if (supabase) {
     try {
       const token = localStorage.getItem(SESSION_KEY);
       if (token && token.includes("_")) {
+        // Supabase session token format
         const { data: session } = await supabase
           .from("user_sessions")
           .select("user_id, expires_at")
@@ -205,7 +180,7 @@ export async function getCurrentUserAsync(): Promise<User | null> {
         }
       }
     } catch (error) {
-      // Fall through to localStorage
+      console.warn("Supabase getCurrentUser error, trying localStorage:", error);
     }
   }
 
@@ -214,11 +189,26 @@ export async function getCurrentUserAsync(): Promise<User | null> {
     const sessionId = localStorage.getItem(SESSION_KEY);
     if (!sessionId) return null;
 
-    const users = getUsers();
+    const users = getUsersFromStorage();
     return users.find((u) => u.id === sessionId) || null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Logout
+ */
+export async function logout(): Promise<void> {
+  const token = localStorage.getItem(SESSION_KEY);
+  if (token && supabase) {
+    try {
+      await supabase.from("user_sessions").delete().eq("token", token);
+    } catch (error) {
+      console.warn("Supabase logout error:", error);
+    }
+  }
+  localStorage.removeItem(SESSION_KEY);
 }
 
 /**
@@ -230,7 +220,7 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 /**
- * Get all users for admin - From Supabase if available, else localStorage
+ * Get all users for admin (from Supabase if available, else localStorage)
  */
 export async function getAllUsersForAdmin(): Promise<User[]> {
   if (supabase) {
@@ -251,16 +241,16 @@ export async function getAllUsersForAdmin(): Promise<User[]> {
         }));
       }
     } catch (error) {
-      console.warn("Supabase getAllUsers error:", error);
+      console.warn("Supabase getAllUsers error, using localStorage:", error);
     }
   }
 
   // Fallback to localStorage
-  return getUsers();
+  return getUsersFromStorage();
 }
 
 // Helper functions
-function getUsers(): User[] {
+function getUsersFromStorage(): User[] {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   } catch {
@@ -270,18 +260,6 @@ function getUsers(): User[] {
 
 function setSession(userId: string): void {
   localStorage.setItem(SESSION_KEY, userId);
-}
-
-function saveUserToLocalStorage(user: User): void {
-  try {
-    const users = getUsers();
-    if (!users.find((u) => u.id === user.id)) {
-      users.push(user);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-    }
-  } catch (error) {
-    console.warn("Failed to save user to localStorage:", error);
-  }
 }
 
 async function createSupabaseSession(userId: string): Promise<void> {
@@ -299,26 +277,7 @@ async function createSupabaseSession(userId: string): Promise<void> {
     });
     localStorage.setItem(SESSION_KEY, token);
   } catch (error) {
-    console.warn("Failed to create Supabase session:", error);
+    console.warn("Failed to create Supabase session, using localStorage:", error);
     localStorage.setItem(SESSION_KEY, userId);
-  }
-}
-
-async function verifySupabaseSession(sessionId: string): Promise<void> {
-  if (!supabase || !sessionId.includes("_")) return;
-  
-  try {
-    const { data } = await supabase
-      .from("user_sessions")
-      .select("expires_at")
-      .eq("token", sessionId)
-      .single();
-    
-    if (!data || data.expires_at < Date.now()) {
-      localStorage.removeItem(SESSION_KEY);
-    }
-  } catch (error) {
-    // Session doesn't exist or expired
-    localStorage.removeItem(SESSION_KEY);
   }
 }

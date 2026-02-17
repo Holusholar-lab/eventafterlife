@@ -20,7 +20,11 @@ const AdminUsers = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    setUsers(getAllUsersForAdmin());
+    const loadUsers = async () => {
+      const allUsers = await getAllUsersForAdmin();
+      setUsers(allUsers);
+    };
+    loadUsers();
   }, []);
 
   const filtered = useMemo(() => {
@@ -35,15 +39,15 @@ const AdminUsers = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
-        <p className="text-gray-600">View and manage registered users.</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">User Management</h1>
+        <p className="text-sm sm:text-base text-gray-600">View and manage registered users.</p>
       </div>
 
       <Card className="border border-gray-200">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 pb-4">
           <CardTitle className="text-gray-900">All Users</CardTitle>
-          <div className="relative w-64">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               placeholder="Search by name or email..."
@@ -63,21 +67,22 @@ const AdminUsers = () => {
               )}
             </div>
           ) : (
-            <div className="rounded-md border border-gray-200">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="text-gray-700 font-semibold">Name</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Email</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Newsletter</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Joined</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium text-gray-900">{user.fullName}</TableCell>
-                      <TableCell className="text-gray-600">{user.email}</TableCell>
+            <div className="overflow-x-auto">
+              <div className="rounded-md border border-gray-200 min-w-full">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="text-gray-700 font-semibold min-w-[150px]">Name</TableHead>
+                      <TableHead className="text-gray-700 font-semibold min-w-[200px]">Email</TableHead>
+                      <TableHead className="text-gray-700 font-semibold whitespace-nowrap">Newsletter</TableHead>
+                      <TableHead className="text-gray-700 font-semibold whitespace-nowrap">Joined</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((user) => (
+                      <TableRow key={user.id} className="hover:bg-gray-50">
+                        <TableCell className="font-medium text-gray-900 break-words">{user.fullName}</TableCell>
+                        <TableCell className="text-gray-600 break-all">{user.email}</TableCell>
                       <TableCell>
                         {user.newsletter ? (
                           <Badge className="bg-green-100 text-green-800 border-green-200">Subscribed</Badge>
@@ -91,7 +96,8 @@ const AdminUsers = () => {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </div>
           )}
         </CardContent>

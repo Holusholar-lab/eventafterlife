@@ -41,7 +41,7 @@ const Login = () => {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    const result = login(data.email, data.password);
+    const result = await login(data.email, data.password);
     
     if (result.success) {
       await ensureRentalsLoaded();

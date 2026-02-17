@@ -7,14 +7,15 @@ export type VideoSourceType = "youtube" | "vimeo" | "drive" | "bunny" | "direct"
 
 const BUNNY_EMBED_BASE = "https://iframe.mediadelivery.net/embed";
 
-/** Bunny Stream: iframe.mediadelivery.net/embed/{libraryId}/{videoId} or player.mediadelivery.net/embed/... */
+/** Bunny Stream: iframe.mediadelivery.net/embed/{libraryId}/{videoId} or /play/... or player.mediadelivery.net/... */
 function getBunnyFromUrl(url: string): { libraryId: string; videoId: string } | null {
   const trimmed = url.trim();
-  // Match: iframe.mediadelivery.net/embed/... or player.mediadelivery.net/embed/...
+  // Match: iframe.mediadelivery.net/embed/... or /play/... or player.mediadelivery.net/embed/...
   // Library ID: one or more digits
   // Video ID: UUID format (8-4-4-4-12 hex chars with hyphens) = 36 chars total
+  // Support both /embed/ and /play/ URLs (convert /play/ to /embed/ for iframe)
   const m = trimmed.match(
-    /(?:https?:\/\/)?(?:iframe|player)\.mediadelivery\.net\/embed\/(\d+)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\?.*|\/?)?$/i
+    /(?:https?:\/\/)?(?:iframe|player)\.mediadelivery\.net\/(?:embed|play)\/(\d+)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\?.*|\/?)?$/i
   );
   if (m) return { libraryId: m[1], videoId: m[2] };
   return null;
@@ -126,7 +127,8 @@ export function parseVideoUrl(input: string): VideoSource {
   }
 
   // Bunny Stream: full embed URL or video ID (with VITE_BUNNY_LIBRARY_ID)
-  const bunnyParams = "preload=true&playsinline=true";
+  // preload and playsinline help playback on mobile; keep autoplay false so user taps play
+  const bunnyParams = "preload=true&playsinline=true&responsive=true";
   const bunnyCdnHost = typeof import.meta.env.VITE_BUNNY_CDN_HOST === "string"
     ? import.meta.env.VITE_BUNNY_CDN_HOST.trim().replace(/\/$/, "")
     : "";
@@ -156,8 +158,8 @@ export function parseVideoUrl(input: string): VideoSource {
   }
 
   // Direct video URL (exclude known embed URLs)
-  // Don't treat embed URLs (iframe.mediadelivery.net, player.mediadelivery.net, youtube.com/embed, etc.) as direct video URLs
-  const isEmbedUrlPattern = /(?:iframe|player)\.mediadelivery\.net\/embed|youtube\.com\/embed|player\.vimeo\.com\/video|drive\.google\.com\/file\/d\/.*\/preview/i;
+  // Don't treat embed URLs (iframe.mediadelivery.net/embed or /play/, player.mediadelivery.net, youtube.com/embed, etc.) as direct video URLs
+  const isEmbedUrlPattern = /(?:iframe|player)\.mediadelivery\.net\/(?:embed|play)|youtube\.com\/embed|player\.vimeo\.com\/video|drive\.google\.com\/file\/d\/.*\/preview/i;
   if (!isEmbedUrlPattern.test(trimmed) && (isDirectVideoUrl(trimmed) || /^https?:\/\//.test(trimmed))) {
     return { type: "direct", src: trimmed, embedUrl: trimmed };
   }

@@ -184,7 +184,7 @@ const UploadVideo = () => {
         isActive: data.isActive,
       });
 
-      toast.success("Video uploaded successfully!");
+      toast.success("Video uploaded successfully! It’s live on the Library for everyone.");
       form.reset();
       setVideoFile(null);
       setThumbnailFile(null);

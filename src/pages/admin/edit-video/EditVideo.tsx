@@ -148,10 +148,10 @@ const EditVideo = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Edit Video</h1>
-        <p className="text-muted-foreground">Update video details, pricing, and accessibility settings.</p>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Edit Video</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Update video details, pricing, and accessibility settings.</p>
       </div>
 
       <Form {...form}>

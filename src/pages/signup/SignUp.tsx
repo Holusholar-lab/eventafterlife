@@ -56,7 +56,7 @@ const SignUp = () => {
   });
 
   const onSubmit = async (data: SignUpFormValues) => {
-    const result = signUp(data.fullName, data.email, data.password, data.newsletter);
+    const result = await signUp(data.fullName, data.email, data.password, data.newsletter);
     
     if (result.success) {
       await ensureRentalsLoaded();

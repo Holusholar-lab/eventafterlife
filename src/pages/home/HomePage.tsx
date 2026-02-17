@@ -4,7 +4,7 @@ import { Play, Users, BookOpen, Clock, ChevronRight } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import VideoCard from "@/components/VideoCard";
 import RentDialog from "@/components/RentDialog";
-import { getPublicVideos } from "@/lib/public-videos";
+import { getPublicVideos, refreshAndGetPublicVideos } from "@/lib/public-videos";
 import {
   Accordion,
   AccordionContent,
@@ -17,14 +17,15 @@ const Index = () => {
   const [selectedVideo, setSelectedVideo] = useState<{ id: string; title: string; image: string; price: string } | null>(null);
   const [videos, setVideos] = useState(getPublicVideos());
 
+  // Keep home in sync with admin uploads (refetch from backend every 30s so new videos appear for everyone)
   useEffect(() => {
-    // Scroll to top of the page when component mounts
     window.scrollTo(0, 0);
-    
-    // Reload videos when component mounts or when storage changes
-    const interval = setInterval(() => {
-      setVideos(getPublicVideos());
-    }, 1000);
+    const refresh = async () => {
+      const next = await refreshAndGetPublicVideos();
+      setVideos(next);
+    };
+    refresh();
+    const interval = setInterval(refresh, 30_000);
     return () => clearInterval(interval);
   }, []);
 

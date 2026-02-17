@@ -85,9 +85,9 @@ const Settings = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
-        <p className="text-gray-600">Site, payment, email, commission, and more.</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Settings</h1>
+        <p className="text-sm sm:text-base text-gray-600">Site, payment, email, commission, and more.</p>
       </div>
 
       <Tabs defaultValue="site" className="space-y-6">

@@ -86,6 +86,8 @@ function videoToRow(v: Partial<AdminVideo>): Partial<Row> {
 }
 
 let _cache: AdminVideo[] | null = null;
+/** Set when Supabase is configured but fetch failed (so we don't show device-specific localStorage). */
+let _loadError: string | null = null;
 
 function getFromStorage(): AdminVideo[] {
   try {
@@ -139,6 +141,7 @@ function initializeFromStorage(): AdminVideo[] {
 
 /** Call once on app load when using Supabase so getAllAdminVideos() has data. */
 export async function ensureAdminVideosLoaded(): Promise<void> {
+  _loadError = null;
   if (supabase) {
     const { data, error } = await supabase
       .from("admin_videos")
@@ -146,13 +149,29 @@ export async function ensureAdminVideosLoaded(): Promise<void> {
       .order("created_at", { ascending: false });
     if (error) {
       console.error("Supabase admin_videos fetch error:", error);
-      _cache = initializeFromStorage();
+      _loadError = error.message || "Failed to load videos from server";
+      _cache = []; // Don't fall back to localStorage – keep all devices in sync with server only
       return;
     }
     _cache = (data as Row[]).map(rowToVideo);
     return;
   }
   _cache = initializeFromStorage();
+}
+
+/** True when Supabase was used but the fetch failed (so you see 0 videos, not device-local data). */
+export function getVideosLoadError(): string | null {
+  return _loadError;
+}
+
+/**
+ * Refetch videos from Supabase so the public library shows the latest uploads.
+ * Call this periodically or after admin changes so all users see updates.
+ */
+export async function refetchAdminVideos(): Promise<void> {
+  _cache = null;
+  _loadError = null;
+  await ensureAdminVideosLoaded();
 }
 
 export function getAllAdminVideos(): AdminVideo[] {

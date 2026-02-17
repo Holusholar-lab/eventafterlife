@@ -183,33 +183,33 @@ const ManageVideos = () => {
             <div className="overflow-x-auto">
               <div className="rounded-md border border-gray-200 min-w-full">
                 <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="text-gray-700 font-semibold">Video</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Status</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Access</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Price</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Views</TableHead>
-                    <TableHead className="text-gray-700 font-semibold">Revenue</TableHead>
-                    <TableHead className="text-gray-700 font-semibold text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="text-gray-700 font-semibold min-w-[200px]">Video</TableHead>
+                      <TableHead className="text-gray-700 font-semibold whitespace-nowrap">Status</TableHead>
+                      <TableHead className="text-gray-700 font-semibold whitespace-nowrap hidden sm:table-cell">Access</TableHead>
+                      <TableHead className="text-gray-700 font-semibold whitespace-nowrap">Price</TableHead>
+                      <TableHead className="text-gray-700 font-semibold whitespace-nowrap hidden md:table-cell">Views</TableHead>
+                      <TableHead className="text-gray-700 font-semibold whitespace-nowrap hidden lg:table-cell">Revenue</TableHead>
+                      <TableHead className="text-gray-700 font-semibold text-right whitespace-nowrap">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {filteredVideos.map((video) => {
                     const status = getStatusBadge(video);
                     const access = getAccessInfo(video);
                     const AccessIcon = access.icon;
                     return (
                       <TableRow key={video.id} className="hover:bg-gray-50">
-                        <TableCell>
+                        <TableCell className="min-w-[200px]">
                           <div>
-                            <div className="font-medium text-gray-900">{video.title}</div>
-                            <div className="text-sm text-gray-500 mt-1">
+                            <div className="font-medium text-gray-900 break-words">{video.title}</div>
+                            <div className="text-xs sm:text-sm text-gray-500 mt-1">
                               {video.duration} • {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Badge
                             variant={status.variant}
                             className={
@@ -221,18 +221,16 @@ const ManageVideos = () => {
                             {status.label}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <div className="flex items-center gap-2 text-gray-600">
-                            <AccessIcon className="w-4 h-4" />
-                            {access.label}
+                            <AccessIcon className="w-4 h-4 shrink-0" />
+                            <span className="hidden sm:inline">{access.label}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-gray-900">
-                          ${video.price48h.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-gray-900">{video.views.toLocaleString()}</TableCell>
-                        <TableCell className="font-medium text-gray-900">${video.revenue.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-gray-900 whitespace-nowrap">${video.price48h.toFixed(2)}</TableCell>
+                        <TableCell className="text-gray-900 whitespace-nowrap">{video.views.toLocaleString()}</TableCell>
+                        <TableCell className="font-medium text-gray-900 whitespace-nowrap">${video.revenue.toFixed(2)}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -283,7 +281,7 @@ const ManageVideos = () => {
                       </TableRow>
                     );
                   })}
-                </TableBody>
+                  </TableBody>
                 </Table>
               </div>
             </div>

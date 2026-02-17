@@ -1,4 +1,4 @@
-import { getAllAdminVideos, AdminVideo } from "./admin-videos";
+import { getAllAdminVideos, refetchAdminVideos, AdminVideo } from "./admin-videos";
 
 export interface PublicVideo {
   id: string;
@@ -59,4 +59,13 @@ export function getPublicCategories(): string[] {
   const videos = getPublicVideos();
   const categories = new Set(videos.map((v) => v.category));
   return ["All", ...Array.from(categories).sort()];
+}
+
+/**
+ * Refetch from backend (Supabase) then return latest public videos.
+ * Use this so the Library/Home show new admin uploads without a full page refresh.
+ */
+export async function refreshAndGetPublicVideos(): Promise<PublicVideo[]> {
+  await refetchAdminVideos();
+  return getPublicVideos();
 }

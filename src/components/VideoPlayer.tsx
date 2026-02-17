@@ -34,41 +34,22 @@ export default function VideoPlayer({
     return (
       <div
         className={cn(
-          "flex items-center justify-center bg-muted text-muted-foreground rounded-lg",
+          "flex items-center justify-center bg-muted text-muted-foreground rounded-lg p-4",
           className
         )}
       >
-        <p className="text-sm p-4 text-center">
-          This video cannot be played. Use a valid Bunny.net, YouTube, Vimeo, Google Drive, or direct video URL.
-        </p>
+        <div className="text-sm text-center max-w-md space-y-2">
+          <p>This video cannot be played. Use a valid Bunny.net, YouTube, Vimeo, Google Drive, or direct video URL.</p>
+          <p className="text-xs opacity-90">
+            Bunny.net: use the full embed link (iframe.mediadelivery.net/embed/…) and add this site’s domain in Bunny Stream → Security → Allowed domains.
+          </p>
+        </div>
       </div>
     );
   }
 
-  // Bunny with direct MP4: try direct first, fallback to embed if it fails
+  // Bunny: use embed iframe first (works when your domain is in Bunny "Allowed domains")
   if (source.type === "bunny") {
-    if (source.src && !bunnyDirectFailed) {
-      const baseUrl = source.src.replace(/\/play_\d+p\.mp4$/, "");
-      return (
-        <video
-          controls
-          playsInline
-          className={cn("w-full h-full rounded-lg", className)}
-          title={title}
-          onError={() => {
-            console.warn("Bunny direct MP4 failed, falling back to embed");
-            setBunnyDirectFailed(true);
-          }}
-        >
-          <source src={`${baseUrl}/play_1080p.mp4`} type="video/mp4" />
-          <source src={`${baseUrl}/play_720p.mp4`} type="video/mp4" />
-          <source src={`${baseUrl}/play_480p.mp4`} type="video/mp4" />
-          <source src={`${baseUrl}/play_360p.mp4`} type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-      );
-    }
-    // Fallback to embed if direct MP4 failed or not available
     if (source.embedUrl) {
       return (
         <div
@@ -78,13 +59,35 @@ export default function VideoPlayer({
           <iframe
             src={source.embedUrl}
             title={title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
             loading="eager"
             className="absolute inset-0 w-full h-full rounded-lg"
-            style={{ border: "none", pointerEvents: "auto", width: "100%", height: "100%" }}
+            style={{ border: 0, position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "auto" }}
           />
         </div>
+      );
+    }
+    // Fallback: try direct MP4 if no embed (e.g. CDN-only setup)
+    if (source.src && !bunnyDirectFailed) {
+      const baseUrl = source.src.replace(/\/play_\d+p\.mp4$/, "");
+      return (
+        <video
+          controls
+          playsInline
+          className={cn("w-full h-full rounded-lg", className)}
+          title={title}
+          onError={() => {
+            console.warn("Bunny direct MP4 failed");
+            setBunnyDirectFailed(true);
+          }}
+        >
+          <source src={`${baseUrl}/play_1080p.mp4`} type="video/mp4" />
+          <source src={`${baseUrl}/play_720p.mp4`} type="video/mp4" />
+          <source src={`${baseUrl}/play_480p.mp4`} type="video/mp4" />
+          <source src={`${baseUrl}/play_360p.mp4`} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
       );
     }
   }
