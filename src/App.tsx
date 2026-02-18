@@ -128,7 +128,7 @@ const App = () => {
             }
           />
           <Route
-            path="/community"
+            path="/community/:id?"
             element={
               <>
                 <Navbar />

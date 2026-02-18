@@ -59,7 +59,7 @@ export async function ensureRentalsLoaded(): Promise<void> {
   _cache = getFromStorage();
 }
 
-function getRentals(): Rental[] {
+export function getRentals(): Rental[] {
   if (_cache) return _cache;
   return getFromStorage();
 }
