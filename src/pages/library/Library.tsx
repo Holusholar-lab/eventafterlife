@@ -15,6 +15,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+// Discussion categories matching Community page
+const discussionCategories = [
+  {
+    id: "leadership",
+    name: "Leadership & Management",
+  },
+  {
+    id: "politics",
+    name: "Politics & Governance",
+  },
+  {
+    id: "innovation",
+    name: "Innovation & Tech",
+  },
+];
+
 type ViewMode = "grid" | "list";
 type SortOption = "popular" | "newest" | "oldest" | "title";
 
@@ -65,14 +81,51 @@ const Library = () => {
       );
     }
 
-    // Event Type filter (using categories)
+    // Event Type filter (using categories) - keep for backward compatibility
     if (!eventTypes.includes("All Events") && eventTypes.length > 0) {
       result = result.filter((v) => eventTypes.includes(v.category));
     }
 
-    // Topics filter (using categories)
+    // Categories filter (matching discussion categories)
     if (topics.length > 0) {
-      result = result.filter((v) => topics.includes(v.category));
+      result = result.filter((v) => {
+        // Check if video category matches any selected discussion category
+        return topics.some((selectedCategory) => {
+          // Find matching discussion category
+          const categoryMatch = discussionCategories.find(
+            (dc) => dc.name === selectedCategory || dc.id === selectedCategory
+          );
+          
+          if (categoryMatch) {
+            const videoCatLower = v.category.toLowerCase();
+            const discussionNameLower = categoryMatch.name.toLowerCase();
+            const discussionIdLower = categoryMatch.id.toLowerCase();
+            
+            // Match video category to discussion category
+            // Try exact match first
+            if (videoCatLower === discussionNameLower || videoCatLower === discussionIdLower) {
+              return true;
+            }
+            // Try partial match (e.g., "Leadership" matches "Leadership & Management")
+            if (
+              videoCatLower.includes(discussionNameLower) ||
+              discussionNameLower.includes(videoCatLower) ||
+              videoCatLower.includes(discussionIdLower) ||
+              discussionIdLower.includes(videoCatLower)
+            ) {
+              return true;
+            }
+            // Try keyword matching (e.g., "Leadership" in video category)
+            const keywords = discussionNameLower.split(/[&\s]+/).filter(k => k.length > 2);
+            if (keywords.some(keyword => videoCatLower.includes(keyword))) {
+              return true;
+            }
+          }
+          
+          // Fallback to exact match with video category
+          return v.category === selectedCategory;
+        });
+      });
     }
 
     // Duration filter (parse duration string like "45 min" or "1 hour")
@@ -247,22 +300,31 @@ const Library = () => {
                     </div>
                   </div>
 
-                  {/* Topics */}
+                  {/* Categories */}
                   <div>
-                    <h3 className="font-semibold text-foreground mb-3">Topics</h3>
+                    <h3 className="font-semibold text-foreground mb-3">Categories</h3>
                     <div className="space-y-2">
-                      {availableCategories.slice(0, 5).map((cat) => (
-                        <div key={cat} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`topic-${cat}`}
-                            checked={topics.includes(cat)}
-                            onCheckedChange={() => toggleTopic(cat)}
-                          />
-                          <Label htmlFor={`topic-${cat}`} className="text-sm cursor-pointer capitalize">
-                            {cat}
-                          </Label>
-                        </div>
-                      ))}
+                      {discussionCategories.map((cat) => {
+                        const isChecked = topics.includes(cat.name) || topics.includes(cat.id);
+                        return (
+                          <div key={cat.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`category-${cat.id}`}
+                              checked={isChecked}
+                              onCheckedChange={() => {
+                                if (isChecked) {
+                                  setTopics(topics.filter(t => t !== cat.name && t !== cat.id));
+                                } else {
+                                  setTopics([...topics, cat.name]);
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`category-${cat.id}`} className="text-sm cursor-pointer">
+                              {cat.name}
+                            </Label>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
