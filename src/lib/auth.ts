@@ -174,7 +174,9 @@ export async function logout(): Promise<void> {
 export function getCurrentUser(): User | null {
   try {
     const sessionId = localStorage.getItem(SESSION_KEY);
-    if (!sessionId) return null;
+    if (!sessionId) {
+      return null;
+    }
 
     const users = getUsers();
     
@@ -231,6 +233,13 @@ export function getCurrentUser(): User | null {
         verifySupabaseSession(sessionId).catch(() => {});
       }
       return user;
+    }
+    
+    // Debug: Log what we have if user not found
+    if (users.length > 0) {
+      console.warn("getCurrentUser: Session token:", sessionId);
+      console.warn("getCurrentUser: Available user IDs:", users.map(u => u.id));
+      console.warn("getCurrentUser: Stored userId mapping:", localStorage.getItem(`${SESSION_KEY}_userid`));
     }
     
     return null;
@@ -457,8 +466,16 @@ export function saveUserToLocalStorage(user: User): void {
       users.push(user);
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+    
+    // Verify it was saved
+    const verify = getUsers();
+    const saved = verify.find(u => u.id === user.id);
+    if (!saved) {
+      console.error("CRITICAL: User not found after save! User ID:", user.id);
+      console.error("Users in storage:", verify.map(u => u.id));
+    }
   } catch (error) {
-    console.warn("Failed to cache user in localStorage:", error);
+    console.error("Failed to cache user in localStorage:", error);
   }
 }
 

@@ -28,7 +28,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/library";
+  const redirectTo = searchParams.get("redirect") || "/";
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -87,13 +87,22 @@ const Login = () => {
       // Force Navbar to refresh by triggering a custom event BEFORE navigation
       window.dispatchEvent(new Event("user-logged-in"));
       
+      // Verify user one final time before redirect
+      const finalUserCheck = getCurrentUser();
+      if (!finalUserCheck && result.user) {
+        // Last attempt - save user again
+        saveUserToLocalStorage(result.user);
+        console.log("Final save attempt - User ID:", result.user.id);
+      }
+      
       // Use window.location for hard redirect to ensure clean state
       // Increased delay to ensure everything is saved
       setTimeout(() => {
         const targetPath = redirectTo || "/";
         console.log("Redirecting to:", targetPath);
+        console.log("User should be available:", getCurrentUser() ? "Yes" : "No");
         window.location.href = targetPath;
-      }, 300);
+      }, 500);
     } else {
       toast({
         title: "Login failed",
