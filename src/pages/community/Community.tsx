@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getCurrentUserAsync } from "@/lib/auth";
 import { formatDistanceToNow } from "date-fns";
 
 interface Discussion {
@@ -132,7 +132,7 @@ const categories = [
 const Community = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const user = getCurrentUser();
+  const [user, setUser] = useState(getCurrentUser());
   const [discussions, setDiscussions] = useState<Discussion[]>(mockDiscussions);
   const [replies, setReplies] = useState<Record<string, Reply[]>>({ "1": mockReplies });
   const [searchQuery, setSearchQuery] = useState("");
@@ -151,14 +151,37 @@ const Community = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    
+    // Check authentication - redirect to login if not logged in
+    if (!user) {
+      getCurrentUserAsync().then((loadedUser) => {
+        if (loadedUser) {
+          setUser(loadedUser);
+        } else {
+          // Redirect to login with return path
+          const redirectPath = id ? `/community/${id}` : "/community";
+          navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`, { replace: true });
+        }
+      });
+      return;
+    }
+
     if (id === "new") {
-      if (!user) {
-        navigate("/login?redirect=/community/new");
-        return;
-      }
       setNewPostOpen(true);
     }
   }, [id, user, navigate]);
+
+  // Show loading or redirect if no user
+  if (!user) {
+    return (
+      <div className="pt-16 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">Please sign in to access discussions</p>
+          <p className="text-sm text-muted-foreground">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleCreatePost = () => {
     if (!newPostTitle.trim() || !newPostContent.trim() || !user) return;
@@ -572,13 +595,7 @@ const Community = () => {
               </h1>
               <p className="text-primary-foreground/80 text-sm sm:text-base">Connect, share insights, and learn together</p>
             </div>
-            <Button onClick={() => {
-              if (!user) {
-                navigate("/login?redirect=/community/new");
-              } else {
-                navigate("/community/new");
-              }
-            }} className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
+            <Button onClick={() => navigate("/community/new")} className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
               New Post
             </Button>
           </div>

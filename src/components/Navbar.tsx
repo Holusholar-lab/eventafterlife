@@ -1,13 +1,27 @@
 import { Link, useLocation } from "react-router-dom";
 import { Play, Menu, X } from "lucide-react";
-import { useState } from "react";
-import { getCurrentUser } from "@/lib/auth";
+import { useState, useEffect } from "react";
+import { getCurrentUser, getCurrentUserAsync } from "@/lib/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Navbar = () => {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const user = getCurrentUser();
+  const [user, setUser] = useState(getCurrentUser());
+  
+  // Try to load user from Supabase if not found in localStorage
+  useEffect(() => {
+    if (!user) {
+      getCurrentUserAsync().then((loadedUser) => {
+        if (loadedUser) {
+          setUser(loadedUser);
+        }
+      });
+    } else {
+      setUser(getCurrentUser());
+    }
+  }, [location.pathname]); // Re-check on route change
+  
   const initials = user
     ? user.fullName
         .trim()

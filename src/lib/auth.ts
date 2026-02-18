@@ -144,6 +144,7 @@ export async function logout(): Promise<void> {
     }
   }
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(`${SESSION_KEY}_userid`);
 }
 
 /**
@@ -156,21 +157,60 @@ export function getCurrentUser(): User | null {
     if (!sessionId) return null;
 
     const users = getUsers();
-    // Match by exact id (localStorage session) or by Supabase token: token = userId_timestamp_random
+    
+    // First try exact match (for localStorage sessions)
     let user = users.find((u) => u.id === sessionId) || null;
+    
+    // If not found, try to get userId from stored mapping (for Supabase sessions)
+    if (!user) {
+      const storedUserId = localStorage.getItem(`${SESSION_KEY}_userid`);
+      if (storedUserId) {
+        user = users.find((u) => u.id === storedUserId) || null;
+      }
+    }
+    
+    // If still not found and sessionId looks like Supabase token (userId_timestamp_random)
     if (!user && sessionId.includes("_")) {
+      // Try to extract userId from token format: userId_timestamp_random
+      // The timestamp is always numeric and 13 digits (milliseconds since epoch)
       const parts = sessionId.split("_");
-      if (parts.length >= 3 && /^\d+$/.test(parts[parts.length - 2])) {
-        const userId = parts.slice(0, -2).join("_");
-        user = users.find((u) => u.id === userId) || null;
+      
+      // Strategy 1: If we have at least 3 parts and second-to-last is numeric (timestamp)
+      if (parts.length >= 3) {
+        // Check if second-to-last part is a timestamp (10-13 digits)
+        const secondToLast = parts[parts.length - 2];
+        if (/^\d{10,13}$/.test(secondToLast)) {
+          // userId is everything before the timestamp
+          const userId = parts.slice(0, -2).join("_");
+          user = users.find((u) => u.id === userId) || null;
+          // Store the mapping for future lookups
+          if (user) {
+            localStorage.setItem(`${SESSION_KEY}_userid`, userId);
+          }
+        }
+      }
+      
+      // Strategy 2: If still not found, try to match by checking if any user's id is a prefix
+      if (!user) {
+        // Try each user's id as a prefix of the sessionId
+        for (const u of users) {
+          if (sessionId.startsWith(u.id + "_")) {
+            user = u;
+            localStorage.setItem(`${SESSION_KEY}_userid`, u.id);
+            break;
+          }
+        }
       }
     }
 
-    if (user && supabase) {
+    // Verify Supabase session is still valid (async, don't wait)
+    if (user && supabase && sessionId.includes("_")) {
       verifySupabaseSession(sessionId).catch(() => {});
     }
+    
     return user;
-  } catch {
+  } catch (error) {
+    console.warn("getCurrentUser error:", error);
     return null;
   }
 }
@@ -303,9 +343,12 @@ async function createSupabaseSession(userId: string): Promise<void> {
       created_at: Date.now(),
     });
     localStorage.setItem(SESSION_KEY, token);
+    // Also store userId mapping for easier lookup
+    localStorage.setItem(`${SESSION_KEY}_userid`, userId);
   } catch (error) {
     console.warn("Failed to create Supabase session:", error);
     localStorage.setItem(SESSION_KEY, userId);
+    localStorage.setItem(`${SESSION_KEY}_userid`, userId);
   }
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Edit, LogOut, Play, Clock, Eye, MessageSquare, Filter, Calendar, CreditCard, Bell, Mail, Shield, Download } from "lucide-react";
-import { getCurrentUser, logout } from "@/lib/auth";
+import { getCurrentUser, getCurrentUserAsync, logout } from "@/lib/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,23 +18,32 @@ import { formatDistanceToNow } from "date-fns";
 import VideoCard from "@/components/VideoCard";
 
 const Profile = () => {
-  const user = getCurrentUser();
   const navigate = useNavigate();
+  const [user, setUser] = useState(getCurrentUser());
   const [activeTab, setActiveTab] = useState("overview");
   const [watchHistoryFilter, setWatchHistoryFilter] = useState("all");
 
   useEffect(() => {
     window.scrollTo(0, 0);
     ensureRentalsLoaded();
-  }, []);
-
-  useEffect(() => {
+    
+    // Try to load user from Supabase if not found
     if (!user) {
-      navigate("/login?redirect=/profile", { replace: true });
+      getCurrentUserAsync().then((loadedUser) => {
+        if (loadedUser) {
+          setUser(loadedUser);
+        } else {
+          // Redirect to login if no user found
+          navigate("/login?redirect=/profile", { replace: true });
+        }
+      });
     }
-  }, [user, navigate]);
+  }, [navigate, user]);
 
+  // Show loading or redirect if no user
   if (!user) {
+    return null; // Will redirect in useEffect
+  }
     return null;
   }
 
