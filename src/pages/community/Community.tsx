@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { getCurrentUser, getCurrentUserAsync } from "@/lib/auth";
+import { getCurrentUser, getCurrentUserAsync, waitForAuth } from "@/lib/auth";
 import { formatDistanceToNow } from "date-fns";
 
 interface Discussion {
@@ -152,24 +152,37 @@ const Community = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     
-    // Check authentication - redirect to login if not logged in
-    if (!user) {
-      getCurrentUserAsync().then((loadedUser) => {
-        if (loadedUser) {
-          setUser(loadedUser);
-        } else {
-          // Redirect to login with return path
-          const redirectPath = id ? `/community/${id}` : "/community";
-          navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`, { replace: true });
+    // Wait for auth initialization, then check authentication
+    const checkAuth = async () => {
+      // First wait for auth to initialize
+      await waitForAuth();
+      
+      // Check if user exists
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+        if (id === "new") {
+          setNewPostOpen(true);
         }
-      });
-      return;
-    }
+        return;
+      }
+      
+      // Try async load from Supabase
+      const loadedUser = await getCurrentUserAsync();
+      if (loadedUser) {
+        setUser(loadedUser);
+        if (id === "new") {
+          setNewPostOpen(true);
+        }
+      } else {
+        // No user found, redirect to login
+        const redirectPath = id ? `/community/${id}` : "/community";
+        navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`, { replace: true });
+      }
+    };
 
-    if (id === "new") {
-      setNewPostOpen(true);
-    }
-  }, [id, user, navigate]);
+    checkAuth();
+  }, [id, navigate]);
 
   // Show loading or redirect if no user
   if (!user) {

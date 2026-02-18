@@ -12,6 +12,10 @@ export interface User {
 const STORAGE_KEY = "afterlife_users";
 const SESSION_KEY = "afterlife_session";
 
+// Track if auth initialization is complete
+let authInitialized = false;
+let authInitPromise: Promise<User | null> | null = null;
+
 /**
  * ARCHITECTURE NOTE:
  * - Supabase is the SINGLE SOURCE OF TRUTH for user data
@@ -51,6 +55,9 @@ export async function signUp(
         await createSupabaseSession(userId);
         // Cache user in localStorage for fast synchronous access (Supabase is source of truth)
         saveUserToLocalStorage({ id: userId, fullName, email: email.toLowerCase(), password, newsletter, createdAt: now });
+        // Reset auth initialization so it re-checks on next access
+        authInitialized = false;
+        authInitPromise = null;
         return { success: true };
       }
       
@@ -114,6 +121,9 @@ export async function login(email: string, password: string): Promise<{ success:
         };
         // Cache user in localStorage for fast synchronous access (Supabase is source of truth)
         saveUserToLocalStorage(user);
+        // Reset auth initialization so it re-checks on next access
+        authInitialized = false;
+        authInitPromise = null;
         return { success: true, user };
       }
     } catch (error) {
@@ -228,57 +238,87 @@ export function getCurrentUser(): User | null {
 /**
  * Initialize auth session on app load - verifies existing session and loads user
  * Call this once when the app starts to restore login state after page refresh
+ * This function is idempotent - calling it multiple times returns the same promise
  */
 export async function initializeAuth(): Promise<User | null> {
-  const token = localStorage.getItem(SESSION_KEY);
-  if (!token) return null;
+  // If already initialized, return cached result
+  if (authInitialized && authInitPromise) {
+    return authInitPromise;
+  }
 
-  // If Supabase is available, verify session and load user
-  if (supabase && token.includes("_")) {
-    try {
-      const { data: session } = await supabase
-        .from("user_sessions")
-        .select("user_id, expires_at")
-        .eq("token", token)
-        .single();
+  // Start initialization
+  authInitPromise = (async () => {
+    const token = localStorage.getItem(SESSION_KEY);
+    if (!token) {
+      authInitialized = true;
+      return null;
+    }
 
-      if (session && session.expires_at > Date.now()) {
-        // Session is valid, load user from Supabase
-        const { data: userData } = await supabase
-          .from("users")
-          .select("*")
-          .eq("id", session.user_id)
+    // If Supabase is available, verify session and load user
+    if (supabase && token.includes("_")) {
+      try {
+        const { data: session } = await supabase
+          .from("user_sessions")
+          .select("user_id, expires_at")
+          .eq("token", token)
           .single();
 
-        if (userData) {
-          const user: User = {
-            id: userData.id,
-            fullName: userData.full_name,
-            email: userData.email,
-            password: "",
-            newsletter: userData.newsletter,
-            createdAt: userData.created_at,
-          };
-          // Cache user in localStorage for fast synchronous access
-          saveUserToLocalStorage(user);
-          localStorage.setItem(`${SESSION_KEY}_userid`, user.id);
-          return user;
+        if (session && session.expires_at > Date.now()) {
+          // Session is valid, load user from Supabase
+          const { data: userData } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", session.user_id)
+            .single();
+
+          if (userData) {
+            const user: User = {
+              id: userData.id,
+              fullName: userData.full_name,
+              email: userData.email,
+              password: "",
+              newsletter: userData.newsletter,
+              createdAt: userData.created_at,
+            };
+            // Cache user in localStorage for fast synchronous access
+            saveUserToLocalStorage(user);
+            localStorage.setItem(`${SESSION_KEY}_userid`, user.id);
+            authInitialized = true;
+            // Dispatch event so components know auth is ready
+            window.dispatchEvent(new Event("auth-initialized"));
+            return user;
+          }
+        } else {
+          // Session expired, clear it
+          localStorage.removeItem(SESSION_KEY);
+          localStorage.removeItem(`${SESSION_KEY}_userid`);
         }
-      } else {
-        // Session expired, clear it
+      } catch (error) {
+        console.warn("Session verification failed:", error);
+        // Session invalid, clear it
         localStorage.removeItem(SESSION_KEY);
         localStorage.removeItem(`${SESSION_KEY}_userid`);
       }
-    } catch (error) {
-      console.warn("Session verification failed:", error);
-      // Session invalid, clear it
-      localStorage.removeItem(SESSION_KEY);
-      localStorage.removeItem(`${SESSION_KEY}_userid`);
     }
-  }
 
-  // Fallback: try to get user from localStorage cache
-  return getCurrentUser();
+    // Fallback: try to get user from localStorage cache
+    const cachedUser = getCurrentUser();
+    authInitialized = true;
+    window.dispatchEvent(new Event("auth-initialized"));
+    return cachedUser;
+  })();
+
+  return authInitPromise;
+}
+
+/**
+ * Wait for auth initialization to complete
+ */
+export async function waitForAuth(): Promise<User | null> {
+  if (authInitialized) {
+    return getCurrentUser();
+  }
+  return initializeAuth();
 }
 
 /**

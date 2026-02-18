@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Play, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
-import { getCurrentUser, getCurrentUserAsync } from "@/lib/auth";
+import { getCurrentUser, getCurrentUserAsync, waitForAuth } from "@/lib/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Navbar = () => {
@@ -12,7 +12,10 @@ const Navbar = () => {
   // Try to load user from Supabase if not found in localStorage
   useEffect(() => {
     // Always re-check user state on route change or login event
-    const checkUser = () => {
+    const checkUser = async () => {
+      // Wait for auth initialization first
+      await waitForAuth();
+      
       // First check synchronously (fastest)
       const currentUser = getCurrentUser();
       if (currentUser) {
@@ -30,17 +33,23 @@ const Navbar = () => {
 
     checkUser();
 
-    // Listen for login events - check immediately and after a short delay
+    // Listen for login events and auth initialization
     const handleLogin = () => {
       checkUser(); // Check immediately
       setTimeout(checkUser, 100); // Check again after localStorage is updated
       setTimeout(checkUser, 300); // Final check
     };
 
+    const handleAuthInit = () => {
+      checkUser();
+    };
+
     window.addEventListener("user-logged-in", handleLogin);
+    window.addEventListener("auth-initialized", handleAuthInit);
     
     return () => {
       window.removeEventListener("user-logged-in", handleLogin);
+      window.removeEventListener("auth-initialized", handleAuthInit);
     };
   }, [location.pathname]); // Re-check on route change
   
