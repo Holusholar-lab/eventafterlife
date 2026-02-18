@@ -9,6 +9,7 @@ import { ensureAdminVideosLoaded } from "@/lib/admin-videos";
 import { ensureRentalsLoaded } from "@/lib/rentals";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import ScrollToTop from "./components/ScrollToTop";
 import Index from "./pages/home";
 import Library from "./pages/library";
 import Community from "./pages/community";
@@ -64,6 +65,7 @@ const App = () => {
       <Sonner />
       <VercelAnalytics />
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           {/* Admin routes */}
           <Route path="/admin" element={<AdminLayout />}>

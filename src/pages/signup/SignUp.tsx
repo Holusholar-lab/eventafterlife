@@ -64,7 +64,7 @@ const SignUp = () => {
         title: "Account created!",
         description: "Welcome! You've been automatically signed in.",
       });
-      navigate("/library");
+      navigate("/");
     } else {
       toast({
         title: "Sign up failed",

@@ -49,7 +49,7 @@ const Login = () => {
         title: "Welcome back!",
         description: "You've been successfully signed in.",
       });
-      navigate(redirectTo.startsWith("/") ? redirectTo : "/library");
+      navigate("/");
     } else {
       toast({
         title: "Login failed",
