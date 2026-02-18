@@ -48,15 +48,35 @@ const Login = () => {
       
       // Ensure user is saved and available immediately
       if (result.user) {
-        // Double-check user is saved (login() should have already done this)
-        const savedUser = getCurrentUser();
-        if (!savedUser) {
-          // If somehow not saved, save it now
-          saveUserToLocalStorage(result.user);
-        }
+        // Force save user (login() should have already done this, but ensure it)
+        saveUserToLocalStorage(result.user);
+        
+        // Wait a moment for localStorage to be written
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
         // Verify user is now available
         const verifyUser = getCurrentUser();
-        console.log("Login successful, user available:", verifyUser ? "Yes" : "No");
+        console.log("Login successful - User ID:", result.user.id);
+        console.log("Session token:", localStorage.getItem("afterlife_session"));
+        console.log("User available in getCurrentUser():", verifyUser ? "Yes" : "No");
+        console.log("User data:", verifyUser);
+        
+        if (!verifyUser) {
+          console.error("CRITICAL: User not found after login! Attempting to fix...");
+          // Try one more time with explicit save
+          saveUserToLocalStorage(result.user);
+          const retryUser = getCurrentUser();
+          console.log("After retry, user available:", retryUser ? "Yes" : "No");
+          
+          if (!retryUser) {
+            toast({
+              title: "Login issue detected",
+              description: "Please refresh the page after login.",
+              variant: "destructive",
+            });
+            // Still redirect, but user might need to refresh
+          }
+        }
       }
       
       toast({
@@ -68,10 +88,12 @@ const Login = () => {
       window.dispatchEvent(new Event("user-logged-in"));
       
       // Use window.location for hard redirect to ensure clean state
+      // Increased delay to ensure everything is saved
       setTimeout(() => {
         const targetPath = redirectTo || "/";
+        console.log("Redirecting to:", targetPath);
         window.location.href = targetPath;
-      }, 200);
+      }, 300);
     } else {
       toast({
         title: "Login failed",

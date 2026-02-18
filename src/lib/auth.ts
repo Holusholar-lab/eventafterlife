@@ -174,26 +174,42 @@ export async function logout(): Promise<void> {
 export function getCurrentUser(): User | null {
   try {
     const sessionId = localStorage.getItem(SESSION_KEY);
-    if (!sessionId) return null;
+    if (!sessionId) {
+      console.log("getCurrentUser: No session token found");
+      return null;
+    }
 
     const users = getUsers();
+    console.log("getCurrentUser: Session token:", sessionId);
+    console.log("getCurrentUser: Users in localStorage:", users.length);
+    console.log("getCurrentUser: User IDs:", users.map(u => u.id));
     
     // First try exact match (for localStorage sessions)
     let user = users.find((u) => u.id === sessionId) || null;
+    if (user) {
+      console.log("getCurrentUser: Found user by exact match");
+      return user;
+    }
     
     // If not found, try to get userId from stored mapping (for Supabase sessions)
     if (!user) {
       const storedUserId = localStorage.getItem(`${SESSION_KEY}_userid`);
+      console.log("getCurrentUser: Stored userId mapping:", storedUserId);
       if (storedUserId) {
         user = users.find((u) => u.id === storedUserId) || null;
+        if (user) {
+          console.log("getCurrentUser: Found user by userId mapping");
+          return user;
+        }
       }
     }
     
     // If still not found and sessionId looks like Supabase token (userId_timestamp_random)
     if (!user && sessionId.includes("_")) {
+      console.log("getCurrentUser: Attempting to parse Supabase token");
       // Try to extract userId from token format: userId_timestamp_random
-      // The timestamp is always numeric and 13 digits (milliseconds since epoch)
       const parts = sessionId.split("_");
+      console.log("getCurrentUser: Token parts:", parts);
       
       // Strategy 1: If we have at least 3 parts and second-to-last is numeric (timestamp)
       if (parts.length >= 3) {
@@ -202,19 +218,24 @@ export function getCurrentUser(): User | null {
         if (/^\d{10,13}$/.test(secondToLast)) {
           // userId is everything before the timestamp
           const userId = parts.slice(0, -2).join("_");
+          console.log("getCurrentUser: Extracted userId:", userId);
           user = users.find((u) => u.id === userId) || null;
           // Store the mapping for future lookups
           if (user) {
+            console.log("getCurrentUser: Found user by parsed userId");
             localStorage.setItem(`${SESSION_KEY}_userid`, userId);
+            return user;
           }
         }
       }
       
       // Strategy 2: If still not found, try to match by checking if any user's id is a prefix
       if (!user) {
+        console.log("getCurrentUser: Trying prefix match");
         // Try each user's id as a prefix of the sessionId
         for (const u of users) {
           if (sessionId.startsWith(u.id + "_")) {
+            console.log("getCurrentUser: Found user by prefix match:", u.id);
             user = u;
             localStorage.setItem(`${SESSION_KEY}_userid`, u.id);
             break;
@@ -223,14 +244,18 @@ export function getCurrentUser(): User | null {
       }
     }
 
-    // Verify Supabase session is still valid (async, don't wait)
-    if (user && supabase && sessionId.includes("_")) {
-      verifySupabaseSession(sessionId).catch(() => {});
+    if (user) {
+      // Verify Supabase session is still valid (async, don't wait)
+      if (supabase && sessionId.includes("_")) {
+        verifySupabaseSession(sessionId).catch(() => {});
+      }
+      return user;
     }
     
-    return user;
+    console.warn("getCurrentUser: User not found for session:", sessionId);
+    return null;
   } catch (error) {
-    console.warn("getCurrentUser error:", error);
+    console.error("getCurrentUser error:", error);
     return null;
   }
 }
