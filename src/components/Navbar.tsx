@@ -35,9 +35,19 @@ const Navbar = () => {
 
     // Listen for login events and auth initialization
     const handleLogin = () => {
+      // Check immediately without waiting for auth init (user should be in localStorage)
+      const immediateUser = getCurrentUser();
+      if (immediateUser) {
+        setUser(immediateUser);
+      }
+      // Also do async check
       checkUser(); // Check immediately
-      setTimeout(checkUser, 100); // Check again after localStorage is updated
-      setTimeout(checkUser, 300); // Final check
+      setTimeout(() => {
+        const delayedUser = getCurrentUser();
+        if (delayedUser) setUser(delayedUser);
+        else checkUser();
+      }, 50); // Check again after localStorage is updated
+      setTimeout(checkUser, 200); // Final check
     };
 
     const handleAuthInit = () => {

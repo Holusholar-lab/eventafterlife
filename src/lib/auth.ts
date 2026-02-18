@@ -440,7 +440,7 @@ function setSession(userId: string): void {
  * NOTE: Supabase is the source of truth. This is only a performance cache.
  * Always use getCurrentUserAsync() to get fresh data from Supabase.
  */
-function saveUserToLocalStorage(user: User): void {
+export function saveUserToLocalStorage(user: User): void {
   try {
     const users = getUsers();
     const existingIndex = users.findIndex((u) => u.id === user.id);

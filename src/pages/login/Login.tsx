@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
-import { login } from "@/lib/auth";
+import { login, getCurrentUser, saveUserToLocalStorage } from "@/lib/auth";
 import { ensureRentalsLoaded } from "@/lib/rentals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,17 +45,33 @@ const Login = () => {
     
     if (result.success) {
       await ensureRentalsLoaded();
+      
+      // Ensure user is saved and available immediately
+      if (result.user) {
+        // Double-check user is saved (login() should have already done this)
+        const savedUser = getCurrentUser();
+        if (!savedUser) {
+          // If somehow not saved, save it now
+          saveUserToLocalStorage(result.user);
+        }
+        // Verify user is now available
+        const verifyUser = getCurrentUser();
+        console.log("Login successful, user available:", verifyUser ? "Yes" : "No");
+      }
+      
       toast({
         title: "Welcome back!",
         description: "You've been successfully signed in.",
       });
-      // Use redirectTo parameter or default to home
+      
       // Force Navbar to refresh by triggering a custom event BEFORE navigation
       window.dispatchEvent(new Event("user-logged-in"));
-      // Small delay to ensure localStorage is updated and Navbar refreshes
+      
+      // Use window.location for hard redirect to ensure clean state
       setTimeout(() => {
-        navigate(redirectTo || "/");
-      }, 150);
+        const targetPath = redirectTo || "/";
+        window.location.href = targetPath;
+      }, 200);
     } else {
       toast({
         title: "Login failed",

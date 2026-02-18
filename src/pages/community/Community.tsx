@@ -154,10 +154,20 @@ const Community = () => {
     
     // Wait for auth initialization, then check authentication
     const checkAuth = async () => {
-      // First wait for auth to initialize
+      // First check synchronously (fastest)
+      const immediateUser = getCurrentUser();
+      if (immediateUser) {
+        setUser(immediateUser);
+        if (id === "new") {
+          setNewPostOpen(true);
+        }
+        return;
+      }
+      
+      // Wait for auth to initialize
       await waitForAuth();
       
-      // Check if user exists
+      // Check again after auth init
       const currentUser = getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
