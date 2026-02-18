@@ -82,12 +82,14 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
       <div className="container flex items-center justify-between h-16">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold tracking-tight">
+          <span className="text-foreground">EVENT</span>
           <img 
             src={logo} 
             alt="Event Afterlife" 
             className="h-8 w-auto"
           />
+          <span className="text-primary">AFTERLIFE</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
