@@ -131,14 +131,12 @@ const AdminLayout = () => {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-[#212B36] text-white border-b border-gray-700">
         <div className="flex items-center justify-between p-4">
-          <Link to="/" className="flex items-center gap-0">
-            <span className="text-white font-bold">EVENT</span>
+          <Link to="/" className="flex items-center">
             <img 
               src={logo} 
               alt="Event Afterlife" 
               className="h-8 w-auto"
             />
-            <span className="text-teal-400 font-bold">AFTERLIFE</span>
           </Link>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -168,14 +166,12 @@ const AdminLayout = () => {
       >
         <div className="flex flex-col h-full pt-16 lg:pt-0">
           <div className="p-6 border-b border-gray-700 lg:block hidden">
-            <Link to="/" className="flex items-center gap-0">
-              <span className="text-white font-bold">EVENT</span>
+            <Link to="/" className="flex items-center">
               <img 
                 src={logo} 
                 alt="Event Afterlife" 
                 className="h-8 w-auto"
               />
-              <span className="text-teal-400 font-bold">AFTERLIFE</span>
             </Link>
           </div>
 
