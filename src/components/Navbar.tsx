@@ -12,11 +12,8 @@ const Navbar = () => {
   // Try to load user from Supabase if not found in localStorage
   useEffect(() => {
     // Always re-check user state on route change or login event
-    const checkUser = async () => {
-      // Wait for auth initialization first
-      await waitForAuth();
-      
-      // First check synchronously (fastest)
+    const checkUser = () => {
+      // First check synchronously (fastest) - don't wait for async
       const currentUser = getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
@@ -31,37 +28,39 @@ const Navbar = () => {
       });
     };
 
+    // Check immediately
     checkUser();
 
     // Listen for login events and auth initialization
     const handleLogin = () => {
-      // Check immediately without waiting for auth init (user should be in localStorage)
-      const immediateUser = getCurrentUser();
-      if (immediateUser) {
-        setUser(immediateUser);
-      }
-      // Also do async check
-      checkUser(); // Check immediately
-      setTimeout(() => {
-        const delayedUser = getCurrentUser();
-        if (delayedUser) setUser(delayedUser);
-        else checkUser();
-      }, 50); // Check again after localStorage is updated
-      setTimeout(checkUser, 200); // Final check
+      // Check multiple times to catch the user as soon as it's saved
+      checkUser();
+      setTimeout(checkUser, 50);
+      setTimeout(checkUser, 100);
+      setTimeout(checkUser, 200);
+      setTimeout(checkUser, 500);
     };
 
     const handleAuthInit = () => {
       checkUser();
     };
 
+    // Poll for user changes (useful after login)
+    const pollInterval = setInterval(() => {
+      if (!user) {
+        checkUser();
+      }
+    }, 1000); // Check every second if no user
+
     window.addEventListener("user-logged-in", handleLogin);
     window.addEventListener("auth-initialized", handleAuthInit);
     
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener("user-logged-in", handleLogin);
       window.removeEventListener("auth-initialized", handleAuthInit);
     };
-  }, [location.pathname]); // Re-check on route change
+  }, [location.pathname, user]); // Re-check on route change and when user changes
   
   const initials = user
     ? user.fullName

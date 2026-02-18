@@ -152,7 +152,7 @@ const Community = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     
-    // Wait for auth initialization, then check authentication
+    // Check authentication - be more lenient to avoid false redirects
     const checkAuth = async () => {
       // First check synchronously (fastest)
       const immediateUser = getCurrentUser();
@@ -164,10 +164,13 @@ const Community = () => {
         return;
       }
       
-      // Wait for auth to initialize
-      await waitForAuth();
+      // Wait a bit for auth to initialize (but don't wait too long)
+      await Promise.race([
+        waitForAuth(),
+        new Promise(resolve => setTimeout(resolve, 500)) // Max 500ms wait
+      ]);
       
-      // Check again after auth init
+      // Check again after potential auth init
       const currentUser = getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
@@ -185,9 +188,15 @@ const Community = () => {
           setNewPostOpen(true);
         }
       } else {
-        // No user found, redirect to login
-        const redirectPath = id ? `/community/${id}` : "/community";
-        navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`, { replace: true });
+        // Only redirect if we're absolutely sure there's no user
+        // Check one more time synchronously before redirecting
+        const finalCheck = getCurrentUser();
+        if (!finalCheck) {
+          const redirectPath = id ? `/community/${id}` : "/community";
+          navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`, { replace: true });
+        } else {
+          setUser(finalCheck);
+        }
       }
     };
 
