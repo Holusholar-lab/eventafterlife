@@ -35,6 +35,7 @@ import Settings from "./pages/admin/settings";
 import ManageMessages from "./pages/admin/manage-messages";
 import AdminUsers from "./pages/admin/users";
 import AdminCategories from "./pages/admin/categories";
+import AdminPartners from "./pages/admin/partners";
 import AdminHosts from "./pages/admin/hosts";
 import AdminCommissions from "./pages/admin/commissions";
 import AdminPayments from "./pages/admin/payments";
@@ -81,6 +82,7 @@ const App = () => {
             <Route path="videos" element={<ManageVideos />} />
             <Route path="upload" element={<UploadVideo />} />
             <Route path="categories" element={<AdminCategories />} />
+            <Route path="partners" element={<AdminPartners />} />
             <Route path="videos/edit/:id" element={<EditVideo />} />
             <Route path="hosts" element={<AdminHosts />} />
             <Route path="commissions" element={<AdminCommissions />} />

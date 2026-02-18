@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Play, Users, BookOpen, Clock, ChevronRight } from "lucide-react";
+import { Play, Users, BookOpen, Clock, ChevronRight, ExternalLink } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import VideoCard from "@/components/VideoCard";
 import RentDialog from "@/components/RentDialog";
 import { getPublicVideos, refreshAndGetPublicVideos } from "@/lib/public-videos";
+import { getAllPartners, Partner } from "@/lib/partners";
 import {
   Accordion,
   AccordionContent,
@@ -16,6 +17,7 @@ const Index = () => {
   const [rentOpen, setRentOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<{ id: string; title: string; image: string; price: string } | null>(null);
   const [videos, setVideos] = useState(getPublicVideos());
+  const [partners, setPartners] = useState<Partner[]>([]);
 
   // Keep home in sync with admin uploads (refetch from backend every 30s so new videos appear for everyone)
   useEffect(() => {
@@ -27,6 +29,19 @@ const Index = () => {
     refresh();
     const interval = setInterval(refresh, 30_000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Load partners
+  useEffect(() => {
+    const loadPartners = async () => {
+      try {
+        const parts = await getAllPartners();
+        setPartners(parts);
+      } catch (error) {
+        console.error("Failed to load partners:", error);
+      }
+    };
+    loadPartners();
   }, []);
 
   const handleRent = (video: { id: string; title: string; image: string; price: string }) => {
@@ -168,6 +183,48 @@ const Index = () => {
           ))}
         </div>
       </section>
+
+      {/* Partners */}
+      {partners.length > 0 && (
+        <section className="bg-secondary py-16">
+          <div className="container px-4 sm:px-6">
+            <div className="text-center mb-8">
+              <h2 className="font-display text-2xl sm:text-3xl font-bold mb-2 text-foreground">Our Partners</h2>
+              <p className="text-muted-foreground text-sm sm:text-base">Trusted by leading organizations</p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 sm:gap-8 items-center justify-items-center">
+              {partners.map((partner) => (
+                <a
+                  key={partner.id}
+                  href={partner.websiteUrl || "#"}
+                  target={partner.websiteUrl ? "_blank" : undefined}
+                  rel={partner.websiteUrl ? "noopener noreferrer" : undefined}
+                  className="group flex items-center justify-center w-full h-24 sm:h-28 p-4 bg-card border border-border rounded-lg hover:border-primary/40 transition-all hover:shadow-md"
+                  title={partner.description || partner.name}
+                >
+                  {partner.logoUrl ? (
+                    <img
+                      src={partner.logoUrl}
+                      alt={partner.name}
+                      className="max-w-full max-h-full object-contain opacity-70 group-hover:opacity-100 transition-opacity"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = "none";
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `<span class="text-sm text-muted-foreground">${partner.name}</span>`;
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span className="text-sm text-muted-foreground">{partner.name}</span>
+                  )}
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* FAQ */}
       <section className="bg-secondary py-16">

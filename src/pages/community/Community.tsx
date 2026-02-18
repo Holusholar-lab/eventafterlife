@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { getCurrentUser, getCurrentUserAsync, waitForAuth } from "@/lib/auth";
+import { getAllCategories, Category } from "@/lib/categories";
 import { formatDistanceToNow } from "date-fns";
 
 interface Discussion {
@@ -99,40 +100,11 @@ const mockReplies: Reply[] = [
   },
 ];
 
-const categories = [
-  {
-    id: "leadership",
-    name: "Leadership & Management",
-    icon: "🎯",
-    description: "Discussions on leading teams, management...",
-    discussions: 245,
-    posts: 1200,
-    lastActivity: Date.now() - 2 * 60 * 1000,
-  },
-  {
-    id: "politics",
-    name: "Politics & Governance",
-    icon: "🏛️",
-    description: "Policy, governance, civic engagement...",
-    discussions: 189,
-    posts: 890,
-    lastActivity: Date.now() - 15 * 60 * 1000,
-  },
-  {
-    id: "innovation",
-    name: "Innovation & Tech",
-    icon: "💡",
-    description: "Technology, innovation, digital transformation...",
-    discussions: 156,
-    posts: 678,
-    lastActivity: Date.now() - 30 * 60 * 1000,
-  },
-];
-
 const Community = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState(getCurrentUser());
+  const [categories, setCategories] = useState<Category[]>([]);
   const [discussions, setDiscussions] = useState<Discussion[]>(mockDiscussions);
   const [replies, setReplies] = useState<Record<string, Reply[]>>({ "1": mockReplies });
   const [searchQuery, setSearchQuery] = useState("");
@@ -146,11 +118,26 @@ const Community = () => {
   const [newPostOpen, setNewPostOpen] = useState(false);
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
-  const [newPostCategory, setNewPostCategory] = useState("leadership");
+  const [newPostCategory, setNewPostCategory] = useState("");
   const [newPostTags, setNewPostTags] = useState("");
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    
+    // Load categories
+    const loadCategories = async () => {
+      try {
+        const cats = await getAllCategories();
+        setCategories(cats);
+        // Set default category if none selected
+        if (!newPostCategory && cats.length > 0) {
+          setNewPostCategory(cats[0].id);
+        }
+      } catch (error) {
+        console.error("Failed to load categories:", error);
+      }
+    };
+    loadCategories();
     
     // Check authentication - be more lenient to avoid false redirects
     const checkAuth = async () => {
@@ -650,40 +637,56 @@ const Community = () => {
         <div className="mb-8">
           <h2 className="font-display text-xl font-bold text-foreground mb-4">Categories:</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map((cat) => (
-              <Card
-                key={cat.id}
-                className="hover:border-primary/40 transition-colors cursor-pointer"
-                onClick={() => setFilterCategory(cat.id)}
-              >
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <span className="text-2xl">{cat.icon}</span>
-                      <h3 className="font-semibold text-foreground">{cat.name}</h3>
+            {categories.map((cat) => {
+              // Calculate stats from discussions
+              const categoryDiscussions = discussions.filter(d => d.category === cat.name || d.category === cat.id);
+              const discussionCount = categoryDiscussions.length;
+              const replyCount = categoryDiscussions.reduce((sum, d) => sum + d.replies, 0);
+              const lastActivity = categoryDiscussions.length > 0 
+                ? Math.max(...categoryDiscussions.map(d => d.lastReplyAt || d.createdAt))
+                : Date.now();
+              
+              return (
+                <Card
+                  key={cat.id}
+                  className="hover:border-primary/40 transition-colors cursor-pointer"
+                  onClick={() => setFilterCategory(cat.id)}
+                >
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        {cat.icon && <span className="text-2xl">{cat.icon}</span>}
+                        <h3 className="font-semibold text-foreground">{cat.name}</h3>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // TODO: Implement follow functionality
+                        }}
+                      >
+                        Follow
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // TODO: Implement follow functionality
-                      }}
-                    >
-                      Follow
-                    </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">{cat.description}</p>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span>{cat.discussions} discussions</span>
-                    <span>•</span>
-                    <span>{cat.posts} posts</span>
-                    <span>•</span>
-                    <span>Last: {formatDistanceToNow(new Date(cat.lastActivity), { addSuffix: true })}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    {cat.description && (
+                      <p className="text-sm text-muted-foreground mb-3">{cat.description}</p>
+                    )}
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>{discussionCount} discussion{discussionCount !== 1 ? "s" : ""}</span>
+                      <span>•</span>
+                      <span>{replyCount} post{replyCount !== 1 ? "s" : ""}</span>
+                      {discussionCount > 0 && (
+                        <>
+                          <span>•</span>
+                          <span>Last: {formatDistanceToNow(new Date(lastActivity), { addSuffix: true })}</span>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
 

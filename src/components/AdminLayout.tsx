@@ -7,7 +7,6 @@ import {
   Settings,
   LayoutDashboard,
   LogOut,
-  Play,
   Eye,
   Mail,
   Users,
@@ -22,7 +21,9 @@ import {
   Tag,
   Menu,
   X,
+  Building2,
 } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -56,7 +57,8 @@ const AdminLayout = () => {
   const contentOpenPath =
     location.pathname.startsWith("/admin/videos") ||
     location.pathname.startsWith("/admin/upload") ||
-    location.pathname.startsWith("/admin/categories");
+    location.pathname.startsWith("/admin/categories") ||
+    location.pathname.startsWith("/admin/partners");
   const hostsOpenPath =
     location.pathname.startsWith("/admin/hosts") ||
     location.pathname.startsWith("/admin/commissions") ||
@@ -93,6 +95,7 @@ const AdminLayout = () => {
         { path: "/admin/videos", label: "All Videos", icon: Video },
         { path: "/admin/upload", label: "Add New", icon: Upload },
         { path: "/admin/categories", label: "Categories", icon: Tag },
+        { path: "/admin/partners", label: "Partners", icon: Building2 },
       ],
     },
     {
@@ -128,12 +131,13 @@ const AdminLayout = () => {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-[#212B36] text-white border-b border-gray-700">
         <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-teal-500 flex items-center justify-center">
-              <Play className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-lg font-bold">Event Afterlife</span>
-          </div>
+          <Link to="/" className="flex items-center gap-2">
+            <img 
+              src={logo} 
+              alt="Event Afterlife" 
+              className="h-8 w-auto"
+            />
+          </Link>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
@@ -162,12 +166,13 @@ const AdminLayout = () => {
       >
         <div className="flex flex-col h-full pt-16 lg:pt-0">
           <div className="p-6 border-b border-gray-700 lg:block hidden">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded bg-teal-500 flex items-center justify-center">
-                <Play className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold">Event Afterlife</span>
-            </div>
+            <Link to="/" className="flex items-center gap-2">
+              <img 
+                src={logo} 
+                alt="Event Afterlife" 
+                className="h-8 w-auto"
+              />
+            </Link>
           </div>
 
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">

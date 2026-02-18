@@ -6,6 +6,7 @@ import RentDialog from "@/components/RentDialog";
 import { getPublicVideos, getPublicCategories, refreshAndGetPublicVideos, PublicVideo } from "@/lib/public-videos";
 import { getVideosLoadError } from "@/lib/admin-videos";
 import { getCurrentUser } from "@/lib/auth";
+import { getAllCategories, Category } from "@/lib/categories";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,22 +15,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-// Discussion categories matching Community page
-const discussionCategories = [
-  {
-    id: "leadership",
-    name: "Leadership & Management",
-  },
-  {
-    id: "politics",
-    name: "Politics & Governance",
-  },
-  {
-    id: "innovation",
-    name: "Innovation & Tech",
-  },
-];
 
 type ViewMode = "grid" | "list";
 type SortOption = "popular" | "newest" | "oldest" | "title";
@@ -41,6 +26,7 @@ const Library = () => {
   const [videos, setVideos] = useState<PublicVideo[]>(getPublicVideos());
   const [categories, setCategories] = useState<string[]>(getPublicCategories());
   const [loadError, setLoadError] = useState<string | null>(getVideosLoadError());
+  const [discussionCategories, setDiscussionCategories] = useState<Category[]>([]);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,9 +38,15 @@ const Library = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const videosPerPage = 12;
 
-  // Keep library in sync with admin uploads
+  // Load categories and keep library in sync with admin uploads
   useEffect(() => {
     window.scrollTo(0, 0);
+    const loadData = async () => {
+      const cats = await getAllCategories();
+      setDiscussionCategories(cats);
+    };
+    loadData();
+    
     const refresh = async () => {
       const next = await refreshAndGetPublicVideos();
       setVideos(next);

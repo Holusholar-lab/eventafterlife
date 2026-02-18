@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { getAdminVideo, updateAdminVideo } from "@/lib/admin-videos";
+import { getAllCategories, Category } from "@/lib/categories";
 import { toast } from "sonner";
 
 const formSchema = z.object({
@@ -36,6 +37,7 @@ const EditVideo = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [video, setVideo] = useState<any>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -86,6 +88,16 @@ const EditVideo = () => {
   });
 
   useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const cats = await getAllCategories();
+        setCategories(cats);
+      } catch (error) {
+        console.error("Failed to load categories:", error);
+      }
+    };
+    loadCategories();
+    
     if (id) {
       const videoData = getAdminVideo(id);
       if (videoData) {
@@ -205,10 +217,12 @@ const EditVideo = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Leadership">Leadership</SelectItem>
-                          <SelectItem value="Management">Management</SelectItem>
-                          <SelectItem value="Strategy">Strategy</SelectItem>
-                          <SelectItem value="Innovation">Innovation</SelectItem>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.name}>
+                              {cat.icon && <span className="mr-2">{cat.icon}</span>}
+                              {cat.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

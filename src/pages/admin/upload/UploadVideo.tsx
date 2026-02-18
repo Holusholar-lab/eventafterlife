@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useNavigate } from "react-router-dom";
-import { Upload, ImageIcon } from "lucide-react";
+import { Upload, ImageIcon, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { createAdminVideo } from "@/lib/admin-videos";
 import { createAndUploadBunnyVideo, getBunnyLibraryId } from "@/lib/bunny";
 import { parseVideoUrl } from "@/lib/video-url";
+import { getAllCategories, createCategory, Category } from "@/lib/categories";
 import { toast } from "sonner";
 
 const formSchema = z.object({
@@ -41,6 +43,11 @@ const UploadVideo = () => {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const bunnyLibraryId = getBunnyLibraryId();
   const [videoUrlValue, setVideoUrlValue] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [newCategoryOpen, setNewCategoryOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDescription, setNewCategoryDescription] = useState("");
+  const [newCategoryIcon, setNewCategoryIcon] = useState("");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -58,6 +65,44 @@ const UploadVideo = () => {
       isActive: true,
     },
   });
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const loadCategories = async () => {
+    try {
+      const cats = await getAllCategories();
+      setCategories(cats);
+    } catch (error) {
+      console.error("Failed to load categories:", error);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast.error("Category name is required");
+      return;
+    }
+
+    try {
+      const newCat = await createCategory(
+        newCategoryName.trim(),
+        newCategoryDescription.trim() || undefined,
+        newCategoryIcon.trim() || undefined
+      );
+      toast.success("Category created successfully");
+      setNewCategoryOpen(false);
+      setNewCategoryName("");
+      setNewCategoryDescription("");
+      setNewCategoryIcon("");
+      await loadCategories();
+      // Set the new category as selected
+      form.setValue("category", newCat.name);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create category");
+    }
+  };
 
   // Convert file to base64 for storage
   const fileToBase64 = (file: File): Promise<string> => {
@@ -160,8 +205,8 @@ const UploadVideo = () => {
       // Use cleaned URL
       data.videoUrl = cleanedUrl;
 
-      // Set isPublic based on category: only "Public" category makes it public
-      const isPublic = data.category === "Public";
+      // isPublic is already set from form data (separate from category)
+      const isPublic = data.isPublic;
 
       console.log("Creating video with data:", {
         title: data.title,
@@ -516,29 +561,80 @@ const UploadVideo = () => {
 
                 <FormField
                   control={form.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Duration</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 45 min" {...field} className="border-gray-300" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700">Access Level</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="border-gray-300">
-                            <SelectValue placeholder="Select access level" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Public">Public</SelectItem>
-                          <SelectItem value="Private">Private</SelectItem>
-                          <SelectItem value="Subscribers">Subscribers</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel className="text-gray-700">Category *</FormLabel>
+                      <div className="flex gap-2">
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="border-gray-300 flex-1">
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {categories.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.name}>
+                                {cat.icon && <span className="mr-2">{cat.icon}</span>}
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setNewCategoryOpen(true)}
+                          className="border-gray-300"
+                          title="Add new category"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
                       <FormDescription className="text-xs text-gray-500">
-                        {field.value === "Public" ? (
-                          <span className="text-green-600">✓ Video will be visible to all users</span>
-                        ) : (
-                          <span className="text-amber-600">⚠ Video will be hidden from public library</span>
-                        )}
+                        Select a content category (used in Library and Community)
                       </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="isPublic"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col justify-end">
+                      <div className="flex items-center justify-between space-x-2">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-gray-700">Public Access</FormLabel>
+                          <FormDescription className="text-xs text-gray-500">
+                            Make video visible to all users
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -568,6 +664,63 @@ const UploadVideo = () => {
           </div>
         </form>
       </Form>
+
+      {/* New Category Dialog */}
+      <Dialog open={newCategoryOpen} onOpenChange={setNewCategoryOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="new-category-name">Category Name *</Label>
+              <Input
+                id="new-category-name"
+                placeholder="e.g., Leadership & Management"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-category-description">Description (optional)</Label>
+              <Textarea
+                id="new-category-description"
+                placeholder="Brief description of this category"
+                value={newCategoryDescription}
+                onChange={(e) => setNewCategoryDescription(e.target.value)}
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-category-icon">Icon (optional)</Label>
+              <Input
+                id="new-category-icon"
+                placeholder="e.g., 🎯"
+                value={newCategoryIcon}
+                onChange={(e) => setNewCategoryIcon(e.target.value)}
+                className="mt-1"
+                maxLength={2}
+              />
+              <p className="text-xs text-gray-500 mt-1">Single emoji or icon character</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setNewCategoryOpen(false);
+              setNewCategoryName("");
+              setNewCategoryDescription("");
+              setNewCategoryIcon("");
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateCategory}>
+              Create Category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

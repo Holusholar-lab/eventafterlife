@@ -1,8 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
-import { Play, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getCurrentUser, getCurrentUserAsync, waitForAuth } from "@/lib/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import logo from "@/assets/logo.png";
 
 const Navbar = () => {
   const location = useLocation();
@@ -81,12 +82,12 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
       <div className="container flex items-center justify-between h-16">
-        <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold tracking-tight">
-          <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-            <Play className="w-4 h-4 text-primary-foreground fill-current" />
-          </div>
-          <span className="text-foreground">EVENT</span>
-          <span className="text-primary">AFTERLIFE</span>
+        <Link to="/" className="flex items-center gap-2">
+          <img 
+            src={logo} 
+            alt="Event Afterlife" 
+            className="h-8 w-auto"
+          />
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
