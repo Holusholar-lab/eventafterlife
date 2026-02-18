@@ -271,19 +271,37 @@ export async function initializeAuth(): Promise<User | null> {
     // If Supabase is available, verify session and load user
     if (supabase && token.includes("_")) {
       try {
-        const { data: session } = await supabase
+        const { data: session, error: sessionError } = await supabase
           .from("user_sessions")
           .select("user_id, expires_at")
           .eq("token", token)
           .single();
 
+        // If table doesn't exist (404), fall back to localStorage
+        if (sessionError && (sessionError.code === "PGRST116" || sessionError.message?.includes("404"))) {
+          console.warn("user_sessions table not found in Supabase, using localStorage mode");
+          const cachedUser = getCurrentUser();
+          authInitialized = true;
+          window.dispatchEvent(new Event("auth-initialized"));
+          return cachedUser;
+        }
+
         if (session && session.expires_at > Date.now()) {
           // Session is valid, load user from Supabase
-          const { data: userData } = await supabase
+          const { data: userData, error: userError } = await supabase
             .from("users")
             .select("*")
             .eq("id", session.user_id)
             .single();
+
+          // If users table doesn't exist, fall back to localStorage
+          if (userError && (userError.code === "PGRST116" || userError.message?.includes("404"))) {
+            console.warn("users table not found in Supabase, using localStorage mode");
+            const cachedUser = getCurrentUser();
+            authInitialized = true;
+            window.dispatchEvent(new Event("auth-initialized"));
+            return cachedUser;
+          }
 
           if (userData) {
             const user: User = {
@@ -307,11 +325,17 @@ export async function initializeAuth(): Promise<User | null> {
           localStorage.removeItem(SESSION_KEY);
           localStorage.removeItem(`${SESSION_KEY}_userid`);
         }
-      } catch (error) {
+      } catch (error: any) {
+        // Handle 404 or table not found errors gracefully
+        if (error?.code === "PGRST116" || error?.message?.includes("404") || error?.status === 404) {
+          console.warn("Supabase tables not found, using localStorage mode:", error);
+          const cachedUser = getCurrentUser();
+          authInitialized = true;
+          window.dispatchEvent(new Event("auth-initialized"));
+          return cachedUser;
+        }
         console.warn("Session verification failed:", error);
-        // Session invalid, clear it
-        localStorage.removeItem(SESSION_KEY);
-        localStorage.removeItem(`${SESSION_KEY}_userid`);
+        // Don't clear session on other errors - might be network issue
       }
     }
 
@@ -345,18 +369,30 @@ export async function getCurrentUserAsync(): Promise<User | null> {
     try {
       const token = localStorage.getItem(SESSION_KEY);
       if (token && token.includes("_")) {
-        const { data: session } = await supabase
+        const { data: session, error: sessionError } = await supabase
           .from("user_sessions")
           .select("user_id, expires_at")
           .eq("token", token)
           .single();
 
+        // If table doesn't exist (404), fall back to localStorage
+        if (sessionError && (sessionError.code === "PGRST116" || sessionError.message?.includes("404") || sessionError.code === "42P01")) {
+          console.warn("user_sessions table not found, using localStorage");
+          return getCurrentUser();
+        }
+
         if (session && session.expires_at > Date.now()) {
-          const { data: userData } = await supabase
+          const { data: userData, error: userError } = await supabase
             .from("users")
             .select("*")
             .eq("id", session.user_id)
             .single();
+
+          // If users table doesn't exist, fall back to localStorage
+          if (userError && (userError.code === "PGRST116" || userError.message?.includes("404") || userError.code === "42P01")) {
+            console.warn("users table not found, using localStorage");
+            return getCurrentUser();
+          }
 
           if (userData) {
             const user: User = {
@@ -373,22 +409,19 @@ export async function getCurrentUserAsync(): Promise<User | null> {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Handle 404 or table not found errors gracefully
+      if (error?.code === "PGRST116" || error?.message?.includes("404") || error?.status === 404 || error?.code === "42P01") {
+        console.warn("Supabase tables not found, using localStorage:", error);
+        return getCurrentUser();
+      }
       console.warn("Supabase getCurrentUserAsync error:", error);
       // Fall through to localStorage cache
     }
   }
 
   // Fallback to localStorage cache (if Supabase not configured or unavailable)
-  try {
-    const sessionId = localStorage.getItem(SESSION_KEY);
-    if (!sessionId) return null;
-
-    const users = getUsers();
-    return users.find((u) => u.id === sessionId) || null;
-  } catch {
-    return null;
-  }
+  return getCurrentUser();
 }
 
 /**
@@ -480,23 +513,42 @@ export function saveUserToLocalStorage(user: User): void {
 }
 
 async function createSupabaseSession(userId: string): Promise<void> {
-  if (!supabase) return;
+  if (!supabase) {
+    // Fallback to localStorage-only mode
+    localStorage.setItem(SESSION_KEY, userId);
+    localStorage.setItem(`${SESSION_KEY}_userid`, userId);
+    return;
+  }
 
   const token = `${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
 
   try {
-    await supabase.from("user_sessions").insert({
+    const { error } = await supabase.from("user_sessions").insert({
       user_id: userId,
       token,
       expires_at: expiresAt,
       created_at: Date.now(),
     });
+    
+    // If table doesn't exist (404), fall back to localStorage-only mode
+    if (error && (error.code === "PGRST116" || error.message?.includes("404") || error.code === "42P01")) {
+      console.warn("user_sessions table not found in Supabase, using localStorage-only mode");
+      localStorage.setItem(SESSION_KEY, userId);
+      localStorage.setItem(`${SESSION_KEY}_userid`, userId);
+      return;
+    }
+    
+    if (error) {
+      throw error;
+    }
+    
     localStorage.setItem(SESSION_KEY, token);
     // Also store userId mapping for easier lookup
     localStorage.setItem(`${SESSION_KEY}_userid`, userId);
-  } catch (error) {
-    console.warn("Failed to create Supabase session:", error);
+  } catch (error: any) {
+    // Handle any error (including 404) by falling back to localStorage
+    console.warn("Failed to create Supabase session, using localStorage-only mode:", error);
     localStorage.setItem(SESSION_KEY, userId);
     localStorage.setItem(`${SESSION_KEY}_userid`, userId);
   }
