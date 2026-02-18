@@ -320,10 +320,15 @@ function setSession(userId: string): void {
 function saveUserToLocalStorage(user: User): void {
   try {
     const users = getUsers();
-    if (!users.find((u) => u.id === user.id)) {
+    const existingIndex = users.findIndex((u) => u.id === user.id);
+    if (existingIndex >= 0) {
+      // Update existing user
+      users[existingIndex] = user;
+    } else {
+      // Add new user
       users.push(user);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
     }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
   } catch (error) {
     console.warn("Failed to save user to localStorage:", error);
   }
