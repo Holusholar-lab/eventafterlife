@@ -11,15 +11,37 @@ const Navbar = () => {
   
   // Try to load user from Supabase if not found in localStorage
   useEffect(() => {
-    if (!user) {
+    // Always re-check user state on route change or login event
+    const checkUser = () => {
+      // First check synchronously (fastest)
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+        return;
+      }
+      
+      // If not found, try async load from Supabase
       getCurrentUserAsync().then((loadedUser) => {
         if (loadedUser) {
           setUser(loadedUser);
         }
       });
-    } else {
-      setUser(getCurrentUser());
-    }
+    };
+
+    checkUser();
+
+    // Listen for login events - check immediately and after a short delay
+    const handleLogin = () => {
+      checkUser(); // Check immediately
+      setTimeout(checkUser, 100); // Check again after localStorage is updated
+      setTimeout(checkUser, 300); // Final check
+    };
+
+    window.addEventListener("user-logged-in", handleLogin);
+    
+    return () => {
+      window.removeEventListener("user-logged-in", handleLogin);
+    };
   }, [location.pathname]); // Re-check on route change
   
   const initials = user

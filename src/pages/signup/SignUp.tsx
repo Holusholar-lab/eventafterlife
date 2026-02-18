@@ -64,7 +64,12 @@ const SignUp = () => {
         title: "Account created!",
         description: "Welcome! You've been automatically signed in.",
       });
-      navigate("/");
+      // Force Navbar to refresh by triggering a custom event BEFORE navigation
+      window.dispatchEvent(new Event("user-logged-in"));
+      // Small delay to ensure localStorage is updated and Navbar refreshes
+      setTimeout(() => {
+        navigate("/");
+      }, 150);
     } else {
       toast({
         title: "Sign up failed",

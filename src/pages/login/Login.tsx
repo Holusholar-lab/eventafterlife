@@ -49,7 +49,13 @@ const Login = () => {
         title: "Welcome back!",
         description: "You've been successfully signed in.",
       });
-      navigate("/");
+      // Use redirectTo parameter or default to home
+      // Force Navbar to refresh by triggering a custom event BEFORE navigation
+      window.dispatchEvent(new Event("user-logged-in"));
+      // Small delay to ensure localStorage is updated and Navbar refreshes
+      setTimeout(() => {
+        navigate(redirectTo || "/");
+      }, 150);
     } else {
       toast({
         title: "Login failed",
