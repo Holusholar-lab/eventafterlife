@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ensureAdminVideosLoaded } from "@/lib/admin-videos";
 import { ensureRentalsLoaded } from "@/lib/rentals";
+import { initializeAuth } from "@/lib/auth";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
@@ -47,7 +48,13 @@ const queryClient = new QueryClient();
 const App = () => {
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    Promise.all([ensureAdminVideosLoaded(), ensureRentalsLoaded()]).then(() => setReady(true));
+    // Initialize auth session first (restore login state on page refresh)
+    // Then load other data
+    Promise.all([
+      initializeAuth(), // Restore user session from Supabase/localStorage
+      ensureAdminVideosLoaded(),
+      ensureRentalsLoaded()
+    ]).then(() => setReady(true));
   }, []);
 
   if (!ready) {

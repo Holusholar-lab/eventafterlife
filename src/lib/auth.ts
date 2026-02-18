@@ -13,6 +13,15 @@ const STORAGE_KEY = "afterlife_users";
 const SESSION_KEY = "afterlife_session";
 
 /**
+ * ARCHITECTURE NOTE:
+ * - Supabase is the SINGLE SOURCE OF TRUTH for user data
+ * - localStorage is ONLY used as a performance cache for synchronous access
+ * - getCurrentUser() reads from cache (fast, synchronous)
+ * - getCurrentUserAsync() reads from Supabase and updates cache (fresh data)
+ * - Always prefer Supabase for writes and fresh reads
+ */
+
+/**
  * Sign up - Uses Supabase for cross-device sync when available
  */
 export async function signUp(
@@ -40,7 +49,7 @@ export async function signUp(
 
       if (!error) {
         await createSupabaseSession(userId);
-        // Also save to localStorage for backward compatibility
+        // Cache user in localStorage for fast synchronous access (Supabase is source of truth)
         saveUserToLocalStorage({ id: userId, fullName, email: email.toLowerCase(), password, newsletter, createdAt: now });
         return { success: true };
       }
@@ -103,7 +112,7 @@ export async function login(email: string, password: string): Promise<{ success:
           newsletter: data.newsletter,
           createdAt: data.created_at,
         };
-        // So getCurrentUser() can find the user (it reads from localStorage)
+        // Cache user in localStorage for fast synchronous access (Supabase is source of truth)
         saveUserToLocalStorage(user);
         return { success: true, user };
       }
@@ -148,8 +157,9 @@ export async function logout(): Promise<void> {
 }
 
 /**
- * Get current user - Checks Supabase session first, falls back to localStorage
- * Synchronous version for backward compatibility (checks localStorage only)
+ * Get current user - Synchronous version that reads from localStorage cache
+ * NOTE: Supabase is the source of truth. localStorage is only a cache for performance.
+ * Use getCurrentUserAsync() to get fresh data from Supabase.
  */
 export function getCurrentUser(): User | null {
   try {
@@ -216,10 +226,67 @@ export function getCurrentUser(): User | null {
 }
 
 /**
- * Get current user async - Checks Supabase session first for cross-device sync
+ * Initialize auth session on app load - verifies existing session and loads user
+ * Call this once when the app starts to restore login state after page refresh
+ */
+export async function initializeAuth(): Promise<User | null> {
+  const token = localStorage.getItem(SESSION_KEY);
+  if (!token) return null;
+
+  // If Supabase is available, verify session and load user
+  if (supabase && token.includes("_")) {
+    try {
+      const { data: session } = await supabase
+        .from("user_sessions")
+        .select("user_id, expires_at")
+        .eq("token", token)
+        .single();
+
+      if (session && session.expires_at > Date.now()) {
+        // Session is valid, load user from Supabase
+        const { data: userData } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", session.user_id)
+          .single();
+
+        if (userData) {
+          const user: User = {
+            id: userData.id,
+            fullName: userData.full_name,
+            email: userData.email,
+            password: "",
+            newsletter: userData.newsletter,
+            createdAt: userData.created_at,
+          };
+          // Cache user in localStorage for fast synchronous access
+          saveUserToLocalStorage(user);
+          localStorage.setItem(`${SESSION_KEY}_userid`, user.id);
+          return user;
+        }
+      } else {
+        // Session expired, clear it
+        localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(`${SESSION_KEY}_userid`);
+      }
+    } catch (error) {
+      console.warn("Session verification failed:", error);
+      // Session invalid, clear it
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(`${SESSION_KEY}_userid`);
+    }
+  }
+
+  // Fallback: try to get user from localStorage cache
+  return getCurrentUser();
+}
+
+/**
+ * Get current user async - Checks Supabase session first (source of truth)
+ * Also updates localStorage cache for fast synchronous access
  */
 export async function getCurrentUserAsync(): Promise<User | null> {
-  // Try Supabase session first
+  // Try Supabase session first (source of truth)
   if (supabase) {
     try {
       const token = localStorage.getItem(SESSION_KEY);
@@ -238,7 +305,7 @@ export async function getCurrentUserAsync(): Promise<User | null> {
             .single();
 
           if (userData) {
-            return {
+            const user: User = {
               id: userData.id,
               fullName: userData.full_name,
               email: userData.email,
@@ -246,15 +313,19 @@ export async function getCurrentUserAsync(): Promise<User | null> {
               newsletter: userData.newsletter,
               createdAt: userData.created_at,
             };
+            // Update localStorage cache with fresh data from Supabase
+            saveUserToLocalStorage(user);
+            return user;
           }
         }
       }
     } catch (error) {
-      // Fall through to localStorage
+      console.warn("Supabase getCurrentUserAsync error:", error);
+      // Fall through to localStorage cache
     }
   }
 
-  // Fallback to localStorage
+  // Fallback to localStorage cache (if Supabase not configured or unavailable)
   try {
     const sessionId = localStorage.getItem(SESSION_KEY);
     if (!sessionId) return null;
@@ -267,10 +338,17 @@ export async function getCurrentUserAsync(): Promise<User | null> {
 }
 
 /**
- * Check if authenticated
+ * Check if authenticated (synchronous check)
  */
-export async function isAuthenticated(): Promise<boolean> {
-  const user = await getCurrentUser();
+export function isAuthenticated(): boolean {
+  return getCurrentUser() !== null;
+}
+
+/**
+ * Check if authenticated (async check with Supabase verification)
+ */
+export async function isAuthenticatedAsync(): Promise<boolean> {
+  const user = await getCurrentUserAsync();
   return user !== null;
 }
 
@@ -317,20 +395,25 @@ function setSession(userId: string): void {
   localStorage.setItem(SESSION_KEY, userId);
 }
 
+/**
+ * Cache user in localStorage for fast synchronous access
+ * NOTE: Supabase is the source of truth. This is only a performance cache.
+ * Always use getCurrentUserAsync() to get fresh data from Supabase.
+ */
 function saveUserToLocalStorage(user: User): void {
   try {
     const users = getUsers();
     const existingIndex = users.findIndex((u) => u.id === user.id);
     if (existingIndex >= 0) {
-      // Update existing user
+      // Update existing cached user
       users[existingIndex] = user;
     } else {
-      // Add new user
+      // Add new cached user
       users.push(user);
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
   } catch (error) {
-    console.warn("Failed to save user to localStorage:", error);
+    console.warn("Failed to cache user in localStorage:", error);
   }
 }
 
